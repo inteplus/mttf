@@ -13,6 +13,8 @@ def init():
             from .keras_engine import hdf5_format
             tensorflow.python.keras.saving.hdf5_format = hdf5_format
             tensorflow.python.keras.engine.training.hdf5_format = hdf5_format
+            import sys
+            sys.modules['tensorflow.python.keras.saving.hdf5_format'] = hdf5_format
     
     return tensorflow
 

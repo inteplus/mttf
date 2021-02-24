@@ -1,6 +1,6 @@
 '''Initialises TensorFlow, monkey-patching if necessary.'''
 
-__all__ = ['import_tf']
+__all__ = ['init']
 
 def init():
     '''Initialises tensorflow, monkey-patching if necessary.'''

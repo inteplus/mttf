@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from setuptools import setup, find_namespace_packages
-from mt.tf.version import version
+from mt.tf.mttf_version import version
 
 setup(name='mttf',
       version=version,

@@ -11,7 +11,8 @@ def init():
     if tensorflow.__version__.startswith('2.') and tensorflow.__version__ < '2.5':
         # monkey-patch mobilenet_v3
         from .keras_applications import mobilenet_v3
-        setattr(tensorflow.python.keras.applications, 'mobilenet_v3', mobilenet_v3)
+        if tensorflow.__version__ < '2.4':
+            setattr(tensorflow.python.keras.applications, 'mobilenet_v3', mobilenet_v3)
         setattr(tensorflow.keras.applications, 'mobilenet_v3', mobilenet_v3)
         setattr(tensorflow.keras.applications, 'MobileNetV3Small', mobilenet_v3.MobileNetV3Small)
         setattr(tensorflow.keras.applications, 'MobileNetV3Large', mobilenet_v3.MobileNetV3Large)

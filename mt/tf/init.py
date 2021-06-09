@@ -17,6 +17,11 @@ def init():
         setattr(tensorflow.keras.applications, 'MobileNetV3Small', mobilenet_v3.MobileNetV3Small)
         setattr(tensorflow.keras.applications, 'MobileNetV3Large', mobilenet_v3.MobileNetV3Large)
         sys.modules['tensorflow.python.keras.applications.mobilenet_v3'] = mobilenet_v3
+
+        # monkey-patch CosineDecay
+        from .keras_optimizers import lr_extra
+        setattr(tensorflow.keras.optimizers.schedules, 'CosineDecay', lr_extra.CosineDecay)
+        sys.modules['tensorflow.python.keras.optimizers.lr_extra'] = lr_extra
  
     if tensorflow.__version__.startswith('2.') and tensorflow.__version__ < '2.5':
         import h5py as _h5

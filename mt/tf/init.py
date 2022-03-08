@@ -38,6 +38,7 @@ def init():
     if tf_ver < version.parse('2.8'):
         # monkey-patch efficientnet_v2
         from .keras_applications import efficientnet_v2
+        setattr(tensorflow.keras.applications, 'effiicientnet_v2', efficientnet_v2)
         setattr(tensorflow.python.keras.applications, 'effiicientnet_v2', efficientnet_v2)
         setattr(tensorflow.keras.applications, 'efficientnet_v2', efficientnet_v2)
         setattr(tensorflow.keras.applications, 'EfficientNetV2B0', efficientnet_v2.EfficientNetV2B0)

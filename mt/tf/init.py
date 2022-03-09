@@ -38,8 +38,12 @@ def init():
     if tf_ver < version.parse('2.8'):
         # monkey-patch efficientnet_v2
         from .keras_applications import efficientnet_v2
-        setattr(tensorflow.keras.applications, 'effiicientnet_v2', efficientnet_v2)
-        setattr(tensorflow.python.keras.applications, 'effiicientnet_v2', efficientnet_v2)
+        if tf_ver < version.parse('2.4'):
+            sys.modules['tensorflow.python.keras.applications.efficientnet_v2'] = efficientnet_v2
+            setattr(tensorflow.python.keras.applications, 'effiicientnet_v2', efficientnet_v2)
+        sys.modules['tensorflow.keras.applications.efficientnet_v2'] = efficientnet_v2
+        sys.modules['keras.applications.efficientnet_v2'] = efficientnet_v2
+        setattr(keras.applications, 'effiicientnet_v2', efficientnet_v2)
         setattr(tensorflow.keras.applications, 'efficientnet_v2', efficientnet_v2)
         setattr(tensorflow.keras.applications, 'EfficientNetV2B0', efficientnet_v2.EfficientNetV2B0)
         setattr(tensorflow.keras.applications, 'EfficientNetV2B1', efficientnet_v2.EfficientNetV2B1)
@@ -48,9 +52,6 @@ def init():
         setattr(tensorflow.keras.applications, 'EfficientNetV2S', efficientnet_v2.EfficientNetV2S)
         setattr(tensorflow.keras.applications, 'EfficientNetV2M', efficientnet_v2.EfficientNetV2M)
         setattr(tensorflow.keras.applications, 'EfficientNetV2L', efficientnet_v2.EfficientNetV2L)
-        sys.modules['tensorflow.python.keras.applications.efficientnet_v2'] = efficientnet_v2
-        sys.modules['tensorflow.keras.applications.efficientnet_v2'] = efficientnet_v2
-        sys.modules['keras.applications.efficientnet_v2'] = efficientnet_v2
     
     return tensorflow
 

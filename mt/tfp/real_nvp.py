@@ -95,12 +95,16 @@ def real_nvp_default_template(
                 x = tf.keras.layers.Dense(
                     units=units,
                     activation=activation,
+                    kernel_initializer="glorot_uniform",
+                    bias_initializer="zeros",
                     *args,  # pylint: disable=keyword-arg-before-vararg
                     **kwargs
                 )(x)
             x = tf.keras.layers.Dense(
                 units=(1 if shift_only else 2) * output_units,
                 activation=None,
+                kernel_initializer="zeros",
+                bias_initializer="zeros",
                 *args,  # pylint: disable=keyword-arg-before-vararg
                 **kwargs
             )(x)

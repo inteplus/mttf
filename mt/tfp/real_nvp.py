@@ -103,7 +103,7 @@ def real_nvp_default_template(
             x = tf.keras.layers.Dense(
                 units=(1 if shift_only else 2) * output_units,
                 activation=None,
-                kernel_initializer="zeros",
+                kernel_initializer="ones",  # to make an initial flat distribution
                 bias_initializer="zeros",
                 *args,  # pylint: disable=keyword-arg-before-vararg
                 **kwargs

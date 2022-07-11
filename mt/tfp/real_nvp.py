@@ -27,6 +27,7 @@ __all__ = ["real_nvp_default_template"]
 
 def real_nvp_default_template(
     hidden_layers,
+    max_abs_value,
     shift_only=False,
     activation="relu",
     name=None,
@@ -103,8 +104,8 @@ def real_nvp_default_template(
             x = tf.keras.layers.Dense(
                 units=(1 if shift_only else 2) * output_units,
                 activation=None,
-                kernel_initializer="ones",  # to make an initial flat distribution
-                bias_initializer="zeros",
+                kernel_initializer="zeros",
+                bias_initializer=tf.keras.initializers.Constant(max_abs_value),
                 *args,  # pylint: disable=keyword-arg-before-vararg
                 **kwargs
             )(x)

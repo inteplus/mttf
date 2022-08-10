@@ -26,7 +26,13 @@ def init():
         from .keras_optimizers import lr_extra
         setattr(tensorflow.keras.optimizers.schedules, 'CosineDecay', lr_extra.CosineDecay)
         sys.modules['tensorflow.python.keras.optimizers.lr_extra'] = lr_extra
- 
+
+    # add mobilenet_v3_split module
+    from .keras_applications import mobilenet_v3_split
+    setattr(tensorflow.keras.applications, 'mobilenet_v3_split', mobilenet_v3_split)
+    sys.modules['tensorflow.keras.applications.mobilenet_v3_split'] = mobilenet_v3_split
+    setattr(tensorflow.keras.applications, 'MobileNetV3Split', mobilenet_v3_split.MobileNetV3Split)
+
     if tf_ver < version.parse('2.5'):
         import h5py as _h5
         if _h5.__version__.startswith('3.'): # hack because h5py>=3.0.0 behaves differently from h5py<3.0.0
@@ -54,7 +60,7 @@ def init():
         setattr(tensorflow.keras.applications, 'EfficientNetV2S', efficientnet_v2.EfficientNetV2S)
         setattr(tensorflow.keras.applications, 'EfficientNetV2M', efficientnet_v2.EfficientNetV2M)
         setattr(tensorflow.keras.applications, 'EfficientNetV2L', efficientnet_v2.EfficientNetV2L)
-    
+
     return tensorflow
 
 init()

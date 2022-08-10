@@ -541,7 +541,6 @@ def MobileNetV3LargeBlock(
 def MobileNetV3Mixer(
     input_tensor,
     last_point_ch,
-    input_shape=None,
     alpha=1.0,
     model_type: str = 'Large', # only 'Small' or 'Large' are accepted
     minimalistic=False,
@@ -588,5 +587,101 @@ def MobileNetV3Mixer(
 
   # Create model.
   model = models.Model(input_tensor, x, name='MobilenetV3{}Mixer'.format(model_type))
+
+  return model
+
+
+def MobileNetV3Output(
+    input_tensor,
+    model_type: str = 'Large', # only 'Small' or 'Large' are accepted
+    include_top=True,
+    classes=1000,
+    pooling=None,
+    dropout_rate=0.2,
+    classifier_activation='softmax',
+):
+  if include_top:
+    if dropout_rate > 0:
+      x = layers.Dropout(dropout_rate)(x)
+    x = layers.Conv2D(classes, kernel_size=1, padding='same', name='Logits')(x)
+    x = layers.Flatten()(x)
+    imagenet_utils.validate_activation(classifier_activation, weights)
+    x = layers.Activation(activation=classifier_activation,
+                          name='Predictions')(x)
+  else:
+    if pooling == 'avg':
+      x = layers.GlobalAveragePooling2D(name='avg_pool')(x)
+    elif pooling == 'max':
+      x = layers.GlobalMaxPooling2D(name='max_pool')(x)
+
+  # Create model.
+  model = models.Model(input_tensor, x, name='MobilenetV3{}Output'.format(model_type))
+
+  return model
+
+
+def MobileNetV3Split(
+    input_shape=None,
+    alpha=1.0,
+    model_type: str = 'Large', # only 'Small' or 'Large' are accepted
+    minimalistic=False,
+    include_top=True,
+    input_tensor=None,
+    classes=1000,
+    pooling=None,
+    dropout_rate=0.2,
+    classifier_activation='softmax',
+):
+  input_block = MobileNetV3InputParser(
+    input_shape=input_shape,
+    model_type=model_type,
+    minimalistic=minimalistic,
+    input_tensor=input_tensor,
+  )
+  x = input_block.output
+
+  for i in range(4):
+    if model_type == 'Large':
+      block = MobileNetV3LargeBlock(
+        i,
+        x,
+        alpha=alpha,
+        minimalistic=minimalistic,
+      )
+    else:
+      block = MobileNetV3SmallBlock(
+        i,
+        x,
+        alpha=alpha,
+        minimalistic=minimalistic,
+      )
+    x = block.output
+
+  if model_type == 'Large':
+    last_point_ch = 1280
+  else:
+    last_point_ch = 1024
+  mixer_block = MobileNetV3Mixer(
+    x,
+    last_point_ch,
+    alpha=alpha,
+    model_type=model_type,
+    minimalistic=minimalistic,
+  )
+  x = mixer_block.output
+
+  output_block = MobileNetV3Output(
+    x,
+    model_type=model_type,
+    include_top=include_top,
+    classes=classes,
+    pooling=pooling,
+    dropout_rate=dropout_rate,
+    classifier_activation=classifier_activation,
+  )
+  x = output_block.output
+
+  # Create model.
+  model = models.Model(input_block.input, x, name='MobilenetV3{}Split'.format(model_type))
 
   return model

@@ -18,12 +18,12 @@
 
 
 try:
-  from tensorflow.keras.applications.mobilenet_v3 import relu, hard_sigmoid, hard_swish, _depth, _se_block, _inverted_res_block
+  from tensorflow.keras.applications.mobilenet_v3 import relu, hard_swish, _depth, _inverted_res_block
 except ImportError:
   try:
-    from keras.applications.mobilenet_v3 import relu, hard_sigmoid, hard_swish, _depth, _se_block, _inverted_res_block
+    from keras.applications.mobilenet_v3 import relu, hard_swish, _depth, _inverted_res_block
   except:
-    from .mobilenet_v3 import relu, hard_sigmoid, hard_swish, _depth, _se_block, _inverted_res_block
+    from .mobilenet_v3 import relu, hard_swish, _depth, _inverted_res_block
 
 
 from tensorflow.python.keras import backend
@@ -37,28 +37,10 @@ from tensorflow.python.platform import tf_logging as logging
 from tensorflow.python.util.tf_export import keras_export
 
 
-# MT-TODO: here, continue from here
-
-
-# TODO(scottzhu): Change this to the GCS path.
-BASE_WEIGHT_PATH = ('https://storage.googleapis.com/tensorflow/'
-                    'keras-applications/mobilenet_v3/')
-WEIGHTS_HASHES = {
-    'large_224_0.75_float': ('765b44a33ad4005b3ac83185abf1d0eb',
-                             'e7b4d1071996dd51a2c2ca2424570e20'),
-    'large_224_1.0_float': ('59e551e166be033d707958cf9e29a6a7',
-                            '037116398e07f018c0005ffcb0406831'),
-    'large_minimalistic_224_1.0_float': ('675e7b876c45c57e9e63e6d90a36599c',
-                                         'a2c33aed672524d1d0b4431808177695'),
-    'small_224_0.75_float': ('cb65d4e5be93758266aa0a7f2c6708b7',
-                             '4d2fe46f1c1f38057392514b0df1d673'),
-    'small_224_1.0_float': ('8768d4c2e7dee89b9d02b2d03d65d862',
-                            'be7100780f875c06bcab93d76641aa26'),
-    'small_minimalistic_224_1.0_float': ('99cd97fb2fcdad2bf028eb838de69e37',
-                                         '20d4e357df3f7a6361f3a288857b1051'),
-}
-
 layers = VersionAwareLayers()
+
+
+# MT-TODO: here, continue from here to deal with stack_fn of MobileNetV3
 
 
 BASE_DOCSTRING = """Instantiates the {name} architecture.
@@ -363,91 +345,9 @@ def MobileNetV3(stack_fn,
   return model
 
 
-@keras_export('keras.applications.MobileNetV3Small')
-def MobileNetV3Small(input_shape=None,
-                     alpha=1.0,
-                     minimalistic=False,
-                     include_top=True,
-                     weights='imagenet',
-                     input_tensor=None,
-                     classes=1000,
-                     pooling=None,
-                     dropout_rate=0.2,
-                     classifier_activation='softmax'):
-
-  def stack_fn(x, kernel, activation, se_ratio):
-
-    def depth(d):
-      return _depth(d * alpha)
-
-    x = _inverted_res_block(x, 1, depth(16), 3, 2, se_ratio, relu, 0)
-    x = _inverted_res_block(x, 72. / 16, depth(24), 3, 2, None, relu, 1)
-    x = _inverted_res_block(x, 88. / 24, depth(24), 3, 1, None, relu, 2)
-    x = _inverted_res_block(x, 4, depth(40), kernel, 2, se_ratio, activation, 3)
-    x = _inverted_res_block(x, 6, depth(40), kernel, 1, se_ratio, activation, 4)
-    x = _inverted_res_block(x, 6, depth(40), kernel, 1, se_ratio, activation, 5)
-    x = _inverted_res_block(x, 3, depth(48), kernel, 1, se_ratio, activation, 6)
-    x = _inverted_res_block(x, 3, depth(48), kernel, 1, se_ratio, activation, 7)
-    x = _inverted_res_block(x, 6, depth(96), kernel, 2, se_ratio, activation, 8)
-    x = _inverted_res_block(x, 6, depth(96), kernel, 1, se_ratio, activation, 9)
-    x = _inverted_res_block(x, 6, depth(96), kernel, 1, se_ratio, activation,
-                            10)
-    return x
-
-  return MobileNetV3(stack_fn, 1024, input_shape, alpha, 'small', minimalistic,
-                     include_top, weights, input_tensor, classes, pooling,
-                     dropout_rate, classifier_activation)
-
-
-@keras_export('keras.applications.MobileNetV3Large')
-def MobileNetV3Large(input_shape=None,
-                     alpha=1.0,
-                     minimalistic=False,
-                     include_top=True,
-                     weights='imagenet',
-                     input_tensor=None,
-                     classes=1000,
-                     pooling=None,
-                     dropout_rate=0.2,
-                     classifier_activation='softmax'):
-
-  def stack_fn(x, kernel, activation, se_ratio):
-
-    def depth(d):
-      return _depth(d * alpha)
-
-    x = _inverted_res_block(x, 1, depth(16), 3, 1, None, relu, 0)
-    x = _inverted_res_block(x, 4, depth(24), 3, 2, None, relu, 1)
-    x = _inverted_res_block(x, 3, depth(24), 3, 1, None, relu, 2)
-    x = _inverted_res_block(x, 3, depth(40), kernel, 2, se_ratio, relu, 3)
-    x = _inverted_res_block(x, 3, depth(40), kernel, 1, se_ratio, relu, 4)
-    x = _inverted_res_block(x, 3, depth(40), kernel, 1, se_ratio, relu, 5)
-    x = _inverted_res_block(x, 6, depth(80), 3, 2, None, activation, 6)
-    x = _inverted_res_block(x, 2.5, depth(80), 3, 1, None, activation, 7)
-    x = _inverted_res_block(x, 2.3, depth(80), 3, 1, None, activation, 8)
-    x = _inverted_res_block(x, 2.3, depth(80), 3, 1, None, activation, 9)
-    x = _inverted_res_block(x, 6, depth(112), 3, 1, se_ratio, activation, 10)
-    x = _inverted_res_block(x, 6, depth(112), 3, 1, se_ratio, activation, 11)
-    x = _inverted_res_block(x, 6, depth(160), kernel, 2, se_ratio, activation,
-                            12)
-    x = _inverted_res_block(x, 6, depth(160), kernel, 1, se_ratio, activation,
-                            13)
-    x = _inverted_res_block(x, 6, depth(160), kernel, 1, se_ratio, activation,
-                            14)
-    return x
-
-  return MobileNetV3(stack_fn, 1280, input_shape, alpha, 'large', minimalistic,
-                     include_top, weights, input_tensor, classes, pooling,
-                     dropout_rate, classifier_activation)
-
-
-MobileNetV3Small.__doc__ = BASE_DOCSTRING.format(name='MobileNetV3Small')
-MobileNetV3Large.__doc__ = BASE_DOCSTRING.format(name='MobileNetV3Large')
-
-
 def MobileNetV3InputParser(
     input_shape=None,
-    model_type='large',
+    model_type: str = 'Large', # only 'Small' or 'Large' are accepted
     minimalistic=False,
     input_tensor=None,
 ):
@@ -547,6 +447,146 @@ def MobileNetV3InputParser(
     inputs = img_input
 
   # Create model.
-  model = models.Model(inputs, x, name='MobileNetV3InputParser' + model_type)
+  model = models.Model(inputs, x, name='MobileNetV3{}InputParser'.format(model_type))
+
+  return model
+
+
+def MobileNetV3SmallBlock(
+    block_id: int, # only 0 to 3 are accepted here
+    input_tensor, # input tensor for the block
+    alpha=1.0,
+    minimalistic=False,
+):
+  def depth(d):
+    return _depth(d * alpha)
+
+  if minimalistic:
+    kernel = 3
+    activation = relu
+    se_ratio = None
+  else:
+    kernel = 5
+    activation = hard_swish
+    se_ratio = 0.25
+
+  x = input_tensor
+  if block_id == 0:
+    x = _inverted_res_block(x, 1, depth(16), 3, 2, se_ratio, relu, 0)
+  elif block_id == 1:
+    x = _inverted_res_block(x, 72. / 16, depth(24), 3, 2, None, relu, 1)
+    x = _inverted_res_block(x, 88. / 24, depth(24), 3, 1, None, relu, 2)
+  elif block_id == 2:
+    x = _inverted_res_block(x, 4, depth(40), kernel, 2, se_ratio, activation, 3)
+    x = _inverted_res_block(x, 6, depth(40), kernel, 1, se_ratio, activation, 4)
+    x = _inverted_res_block(x, 6, depth(40), kernel, 1, se_ratio, activation, 5)
+    x = _inverted_res_block(x, 3, depth(48), kernel, 1, se_ratio, activation, 6)
+    x = _inverted_res_block(x, 3, depth(48), kernel, 1, se_ratio, activation, 7)
+  else:
+    x = _inverted_res_block(x, 6, depth(96), kernel, 2, se_ratio, activation, 8)
+    x = _inverted_res_block(x, 6, depth(96), kernel, 1, se_ratio, activation, 9)
+    x = _inverted_res_block(x, 6, depth(96), kernel, 1, se_ratio, activation, 10)
+
+  # Create model.
+  model = models.Model(input_tensor, x, name='MobileNetV3SmallBlock{}'.format(block_id))
+
+  return model
+
+
+def MobileNetV3LargeBlock(
+    block_id: int, # only 0 to 3 are accepted here
+    input_tensor, # input tensor for the block
+    alpha=1.0,
+    minimalistic=False,
+):
+  def depth(d):
+    return _depth(d * alpha)
+
+  if minimalistic:
+    kernel = 3
+    activation = relu
+    se_ratio = None
+  else:
+    kernel = 5
+    activation = hard_swish
+    se_ratio = 0.25
+
+  x = input_tensor
+  if block_id == 0:
+    x = _inverted_res_block(x, 1, depth(16), 3, 1, None, relu, 0)
+    x = _inverted_res_block(x, 4, depth(24), 3, 2, None, relu, 1)
+    x = _inverted_res_block(x, 3, depth(24), 3, 1, None, relu, 2)
+  elif block_id == 1:
+    x = _inverted_res_block(x, 3, depth(40), kernel, 2, se_ratio, relu, 3)
+    x = _inverted_res_block(x, 3, depth(40), kernel, 1, se_ratio, relu, 4)
+    x = _inverted_res_block(x, 3, depth(40), kernel, 1, se_ratio, relu, 5)
+  elif block_id == 2:
+    x = _inverted_res_block(x, 6, depth(80), 3, 2, None, activation, 6)
+    x = _inverted_res_block(x, 2.5, depth(80), 3, 1, None, activation, 7)
+    x = _inverted_res_block(x, 2.3, depth(80), 3, 1, None, activation, 8)
+    x = _inverted_res_block(x, 2.3, depth(80), 3, 1, None, activation, 9)
+    x = _inverted_res_block(x, 6, depth(112), 3, 1, se_ratio, activation, 10)
+    x = _inverted_res_block(x, 6, depth(112), 3, 1, se_ratio, activation, 11)
+  else:
+    x = _inverted_res_block(x, 6, depth(160), kernel, 2, se_ratio, activation, 12)
+    x = _inverted_res_block(x, 6, depth(160), kernel, 1, se_ratio, activation, 13)
+    x = _inverted_res_block(x, 6, depth(160), kernel, 1, se_ratio, activation, 14)
+
+  # Create model.
+  model = models.Model(input_tensor, x, name='MobileNetV3LargeBlock{}'.format(block_id))
+
+  return model
+
+
+def MobileNetV3Mixer(
+    input_tensor,
+    last_point_ch,
+    input_shape=None,
+    alpha=1.0,
+    model_type: str = 'Large', # only 'Small' or 'Large' are accepted
+    minimalistic=False,
+):
+  channel_axis = 1 if backend.image_data_format() == 'channels_first' else -1
+
+  if minimalistic:
+    kernel = 3
+    activation = relu
+    se_ratio = None
+  else:
+    kernel = 5
+    activation = hard_swish
+    se_ratio = 0.25
+
+  last_conv_ch = _depth(backend.int_shape(x)[channel_axis] * 6)
+
+  # if the width multiplier is greater than 1 we
+  # increase the number of output channels
+  if alpha > 1.0:
+    last_point_ch = _depth(last_point_ch * alpha)
+  x = layers.Conv2D(
+      last_conv_ch,
+      kernel_size=1,
+      padding='same',
+      use_bias=False,
+      name='Conv_1')(input_tensor)
+  x = layers.BatchNormalization(
+      axis=channel_axis, epsilon=1e-3,
+      momentum=0.999, name='Conv_1/BatchNorm')(x)
+  x = activation(x)
+  x = layers.GlobalAveragePooling2D()(x)
+  if channel_axis == 1:
+    x = layers.Reshape((last_conv_ch, 1, 1))(x)
+  else:
+    x = layers.Reshape((1, 1, last_conv_ch))(x)
+  x = layers.Conv2D(
+      last_point_ch,
+      kernel_size=1,
+      padding='same',
+      use_bias=True,
+      name='Conv_2')(x)
+  x = activation(x)
+
+  # Create model.
+  model = models.Model(input_tensor, x, name='MobilenetV3{}Mixer'.format(model_type))
 
   return model

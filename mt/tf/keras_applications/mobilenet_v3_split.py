@@ -18,12 +18,12 @@
 
 
 try:
-  from tensorflow.keras.applications.mobilenet_v3 import _depth, _inverted_res_block
+  from tensorflow.keras.applications.mobilenet_v3 import relu, hard_sigmoid, hard_swish, _depth, _se_block, _inverted_res_block
 except ImportError:
   try:
-    from keras.applications.mobilenet_v3 import _depth, _inverted_res_block
+    from keras.applications.mobilenet_v3 import relu, hard_sigmoid, hard_swish, _depth, _se_block, _inverted_res_block
   except:
-    from .mobilenet_v3 import _depth, _inverted_res_block
+    from .mobilenet_v3 import relu, hard_sigmoid, hard_swish, _depth, _se_block, _inverted_res_block
 
 
 from tensorflow.python.keras import backend
@@ -445,151 +445,108 @@ MobileNetV3Small.__doc__ = BASE_DOCSTRING.format(name='MobileNetV3Small')
 MobileNetV3Large.__doc__ = BASE_DOCSTRING.format(name='MobileNetV3Large')
 
 
-def relu(x):
-  return layers.ReLU()(x)
+def MobileNetV3InputParser(
+    input_shape=None,
+    model_type='large',
+    minimalistic=False,
+    input_tensor=None,
+):
+  # Determine proper input shape and default size.
+  # If both input_shape and input_tensor are used, they should match
+  if input_shape is not None and input_tensor is not None:
+    try:
+      is_input_t_tensor = backend.is_keras_tensor(input_tensor)
+    except ValueError:
+      try:
+        is_input_t_tensor = backend.is_keras_tensor(
+            layer_utils.get_source_inputs(input_tensor))
+      except ValueError:
+        raise ValueError('input_tensor: ', input_tensor,
+                         'is not type input_tensor')
+    if is_input_t_tensor:
+      if backend.image_data_format() == 'channels_first':
+        if backend.int_shape(input_tensor)[1] != input_shape[1]:
+          raise ValueError('input_shape: ', input_shape, 'and input_tensor: ',
+                           input_tensor,
+                           'do not meet the same shape requirements')
+      else:
+        if backend.int_shape(input_tensor)[2] != input_shape[1]:
+          raise ValueError('input_shape: ', input_shape, 'and input_tensor: ',
+                           input_tensor,
+                           'do not meet the same shape requirements')
+    else:
+      raise ValueError('input_tensor specified: ', input_tensor,
+                       'is not a keras tensor')
 
+  # If input_shape is None, infer shape from input_tensor
+  if input_shape is None and input_tensor is not None:
 
-def hard_sigmoid(x):
-  return layers.ReLU(6.)(x + 3.) * (1. / 6.)
+    try:
+      backend.is_keras_tensor(input_tensor)
+    except ValueError:
+      raise ValueError('input_tensor: ', input_tensor, 'is type: ',
+                       type(input_tensor), 'which is not a valid type')
 
+    if backend.is_keras_tensor(input_tensor):
+      if backend.image_data_format() == 'channels_first':
+        rows = backend.int_shape(input_tensor)[2]
+        cols = backend.int_shape(input_tensor)[3]
+        input_shape = (3, cols, rows)
+      else:
+        rows = backend.int_shape(input_tensor)[1]
+        cols = backend.int_shape(input_tensor)[2]
+        input_shape = (cols, rows, 3)
+  # If input_shape is None and input_tensor is None using standard shape
+  if input_shape is None and input_tensor is None:
+    input_shape = (None, None, 3)
 
-def hard_swish(x):
-  return layers.Multiply()([hard_sigmoid(x), x])
-
-
-# This function is taken from the original tf repo.
-# It ensures that all layers have a channel number that is divisible by 8
-# It can be seen here:
-# https://github.com/tensorflow/models/blob/master/research/
-# slim/nets/mobilenet/mobilenet.py
-
-
-def _depth(v, divisor=8, min_value=None):
-  if min_value is None:
-    min_value = divisor
-  new_v = max(min_value, int(v + divisor / 2) // divisor * divisor)
-  # Make sure that round down does not go down by more than 10%.
-  if new_v < 0.9 * v:
-    new_v += divisor
-  return new_v
-
-
-def _se_block(inputs, filters, se_ratio, prefix):
-  x = layers.GlobalAveragePooling2D(name=prefix + 'squeeze_excite/AvgPool')(
-      inputs)
-  if backend.image_data_format() == 'channels_first':
-    x = layers.Reshape((filters, 1, 1))(x)
+  if backend.image_data_format() == 'channels_last':
+    row_axis, col_axis = (0, 1)
   else:
-    x = layers.Reshape((1, 1, filters))(x)
-  x = layers.Conv2D(
-      _depth(filters * se_ratio),
-      kernel_size=1,
-      padding='same',
-      name=prefix + 'squeeze_excite/Conv')(
-          x)
-  x = layers.ReLU(name=prefix + 'squeeze_excite/Relu')(x)
-  x = layers.Conv2D(
-      filters,
-      kernel_size=1,
-      padding='same',
-      name=prefix + 'squeeze_excite/Conv_1')(
-          x)
-  x = hard_sigmoid(x)
-  x = layers.Multiply(name=prefix + 'squeeze_excite/Mul')([inputs, x])
-  return x
+    row_axis, col_axis = (1, 2)
+  rows = input_shape[row_axis]
+  cols = input_shape[col_axis]
+  if rows and cols and (rows < 32 or cols < 32):
+    raise ValueError('Input size must be at least 32x32; got `input_shape=' +
+                     str(input_shape) + '`')
 
+  if input_tensor is None:
+    img_input = layers.Input(shape=input_shape)
+  else:
+    if not backend.is_keras_tensor(input_tensor):
+      img_input = layers.Input(tensor=input_tensor, shape=input_shape)
+    else:
+      img_input = input_tensor
 
-def _inverted_res_block(x, expansion, filters, kernel_size, stride, se_ratio,
-                        activation, block_id):
   channel_axis = 1 if backend.image_data_format() == 'channels_first' else -1
-  shortcut = x
-  prefix = 'expanded_conv/'
-  infilters = backend.int_shape(x)[channel_axis]
-  if block_id:
-    # Expand
-    prefix = 'expanded_conv_{}/'.format(block_id)
-    x = layers.Conv2D(
-        _depth(infilters * expansion),
-        kernel_size=1,
-        padding='same',
-        use_bias=False,
-        name=prefix + 'expand')(
-            x)
-    x = layers.BatchNormalization(
-        axis=channel_axis,
-        epsilon=1e-3,
-        momentum=0.999,
-        name=prefix + 'expand/BatchNorm')(
-            x)
-    x = activation(x)
 
-  if stride == 2:
-    x = layers.ZeroPadding2D(
-        padding=imagenet_utils.correct_pad(x, kernel_size),
-        name=prefix + 'depthwise/pad')(
-            x)
-  x = layers.DepthwiseConv2D(
-      kernel_size,
-      strides=stride,
-      padding='same' if stride == 1 else 'valid',
+  if minimalistic:
+    activation = relu
+  else:
+    activation = hard_swish
+
+  x = img_input
+  x = layers.Rescaling(scale=1. / 127.5, offset=-1.)(x)
+  x = layers.Conv2D(
+      16,
+      kernel_size=3,
+      strides=(2, 2),
+      padding='same',
       use_bias=False,
-      name=prefix + 'depthwise')(
-          x)
+      name='Conv')(x)
   x = layers.BatchNormalization(
-      axis=channel_axis,
-      epsilon=1e-3,
-      momentum=0.999,
-      name=prefix + 'depthwise/BatchNorm')(
-          x)
+      axis=channel_axis, epsilon=1e-3,
+      momentum=0.999, name='Conv/BatchNorm')(x)
   x = activation(x)
 
-  if se_ratio:
-    x = _se_block(x, _depth(infilters * expansion), se_ratio, prefix)
+  # Ensure that the model takes into account
+  # any potential predecessors of `input_tensor`.
+  if input_tensor is not None:
+    inputs = layer_utils.get_source_inputs(input_tensor)
+  else:
+    inputs = img_input
 
-  x = layers.Conv2D(
-      filters,
-      kernel_size=1,
-      padding='same',
-      use_bias=False,
-      name=prefix + 'project')(
-          x)
-  x = layers.BatchNormalization(
-      axis=channel_axis,
-      epsilon=1e-3,
-      momentum=0.999,
-      name=prefix + 'project/BatchNorm')(
-          x)
+  # Create model.
+  model = models.Model(inputs, x, name='MobileNetV3InputParser' + model_type)
 
-  if stride == 1 and infilters == filters:
-    x = layers.Add(name=prefix + 'Add')([shortcut, x])
-  return x
-
-
-@keras_export('keras.applications.mobilenet_v3.preprocess_input')
-def preprocess_input(x, data_format=None):  # pylint: disable=unused-argument
-  """A placeholder method for backward compatibility.
-
-  The preprocessing logic has been included in the mobilenet_v3 model
-  implementation. Users are no longer required to call this method to normalize
-  the input data. This method does nothing and only kept as a placeholder to
-  align the API surface between old and new version of model.
-
-  Args:
-    x: A floating point `numpy.array` or a `tf.Tensor`.
-    data_format: Optional data format of the image tensor/array. Defaults to
-      None, in which case the global setting
-      `tf.keras.backend.image_data_format()` is used (unless you changed it,
-      it defaults to "channels_last").{mode}
-
-  Returns:
-    Unchanged `numpy.array` or `tf.Tensor`.
-  """
-  return x
-
-
-@keras_export('keras.applications.mobilenet_v3.decode_predictions')
-def decode_predictions(preds, top=5):
-  return imagenet_utils.decode_predictions(preds, top=top)
-
-
-decode_predictions.__doc__ = imagenet_utils.decode_predictions.__doc__
+  return model

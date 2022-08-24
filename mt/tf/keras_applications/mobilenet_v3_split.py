@@ -311,16 +311,73 @@ def MobileNetV3Output(
 
 def MobileNetV3Split(
     input_shape=None,
-    alpha=1.0,
-    model_type: str = "Large",  # only 'Small' or 'Large' are accepted
-    minimalistic=False,
-    include_top=True,
-    classes=1000,
+    alpha: float = 1.0,
+    model_type: str = "Large",
+    minimalistic: bool = False,
+    include_top: bool = True,
+    classes: int = 1000,
     pooling=None,
-    dropout_rate=0.2,
+    dropout_rate: float = 0.2,
     classifier_activation="softmax",
+    output_all: bool = False,
 ):
-    """Prepares a model of submodels which is equivalent to a MobileNetV3 model."""
+    """Prepares a model of submodels which is equivalent to a MobileNetV3 model.
+
+    Parameters
+    ----------
+    input_shape : tuple
+        Optional shape tuple, to be specified if you would like to use a model with an input image
+        resolution that is not (224, 224, 3). It should have exactly 3 inputs channels
+        (224, 224, 3). You can also omit this option if you would like to infer input_shape from an
+        input_tensor. If you choose to include both input_tensor and input_shape then input_shape
+        will be used if they match, if the shapes do not match then we will throw an error. E.g.
+        `(160, 160, 3)` would be one valid value.
+    alpha : float
+        controls the width of the network. This is known as the depth multiplier in the MobileNetV3
+        paper, but the name is kept for consistency with MobileNetV1 in Keras.
+        - If `alpha` < 1.0, proportionally decreases the number
+            of filters in each layer.
+        - If `alpha` > 1.0, proportionally increases the number
+            of filters in each layer.
+        - If `alpha` = 1, default number of filters from the paper
+            are used at each layer.
+          the mobilenetv3 alpha value
+    model_type : {'Small', 'Large'}
+        whether it is the small variant or the large variant
+    minimalistic : bool
+        In addition to large and small models this module also contains so-called minimalistic
+        models, these models have the same per-layer dimensions characteristic as MobilenetV3
+        however, they do not utilize any of the advanced blocks (squeeze-and-excite units,
+        hard-swish, and 5x5 convolutions). While these models are less efficient on CPU, they
+        are much more performant on GPU/DSP.
+    include_top : bool
+        whether to include the fully-connected layer at the top of the network. Defaults to `True`.
+    pooling : str, optional
+        Optional pooling mode for feature extraction when `include_top` is `False`.
+        - `None` means that the output of the model will be the 4D tensor output of the last
+          convolutional block.
+        - `avg` means that global average pooling will be applied to the output of the last
+          convolutional block, and thus the output of the model will be a 2D tensor.
+        - `max` means that global max pooling will be applied.
+    classes : int, optional
+        Optional number of classes to classify images into, only to be specified if `include_top`
+        is True.
+    dropout_rate : float
+        fraction of the input units to drop on the last layer.
+    classifier_activation : object
+        A `str` or callable. The activation function to use on the "top" layer. Ignored unless
+        `include_top=True`. Set `classifier_activation=None` to return the logits of the "top"
+        layer. When loading pretrained weights, `classifier_activation` can only be `None` or
+        `"softmax"`.
+    output_all : bool
+        If True, the model returns the output tensor of every submodel other than the input layer.
+        Otherwise, it returns the output tensor of the last submodel.
+
+    Returns
+    -------
+    tensorflow.keras.Model
+        the output MobileNetV3 model split into 5 submodels
+    """
 
     input_layer = MobileNetV3Input(input_shape=input_shape)
     input_block = MobileNetV3Parser(
@@ -329,6 +386,7 @@ def MobileNetV3Split(
         minimalistic=minimalistic,
     )
     x = input_block(input_layer)
+    outputs = [x]
 
     for i in range(4):
         if model_type == "Large":
@@ -346,6 +404,10 @@ def MobileNetV3Split(
                 minimalistic=minimalistic,
             )
         x = block(x)
+        if output_all:
+            outputs.append(x)
+        else:
+            outputs = [x]
 
     if model_type == "Large":
         last_point_ch = 1280
@@ -359,6 +421,10 @@ def MobileNetV3Split(
         minimalistic=minimalistic,
     )
     x = mixer_block(x)
+    if output_all:
+        outputs.append(x)
+    else:
+        outputs = [x]
 
     output_block = MobileNetV3Output(
         x,
@@ -371,8 +437,14 @@ def MobileNetV3Split(
     )
     if output_block is not None:
         x = output_block(x)
+        if output_all:
+            outputs.append(x)
+        else:
+            outputs = [x]
 
     # Create model.
-    model = models.Model(input_layer, x, name="MobilenetV3{}Split".format(model_type))
+    model = models.Model(
+        input_layer, outputs, name="MobilenetV3{}Split".format(model_type)
+    )
 
     return model

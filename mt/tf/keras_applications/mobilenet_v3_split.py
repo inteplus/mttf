@@ -32,6 +32,9 @@ no pre-trained weights exist.
 """
 
 
+import typing as tp
+
+
 __all__ = [
     "MobileNetV3Input",
     "MobileNetV3Parser",
@@ -321,6 +324,7 @@ def MobileNetV3Split(
     dropout_rate: float = 0.2,
     classifier_activation="softmax",
     output_all: bool = False,
+    name: tp.Optional[str] = None,
 ):
     """Prepares a model of submodels which is equivalent to a MobileNetV3 model.
 
@@ -379,6 +383,8 @@ def MobileNetV3Split(
     output_all : bool
         If True, the model returns the output tensor of every submodel other than the input layer.
         Otherwise, it returns the output tensor of the last submodel.
+    name : str, optional
+        model name, if any. Default to 'MobileNetV3LargeSplit' or 'MobileNetV3SmallSplit'.
 
     Returns
     -------
@@ -451,8 +457,8 @@ def MobileNetV3Split(
                 outputs = [x]
 
     # Create model.
-    model = models.Model(
-        input_layer, outputs, name="MobilenetV3{}Split".format(model_type)
-    )
+    if name is None:
+        name = "MobilenetV3{}Split".format(model_type)
+    model = models.Model(input_layer, outputs, name=name)
 
     return model

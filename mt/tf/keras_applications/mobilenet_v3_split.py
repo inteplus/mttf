@@ -314,9 +314,10 @@ def MobileNetV3Split(
     alpha: float = 1.0,
     model_type: str = "Large",
     minimalistic: bool = False,
+    include_mixer: bool = True,
     include_top: bool = True,
-    classes: int = 1000,
     pooling=None,
+    classes: int = 1000,
     dropout_rate: float = 0.2,
     classifier_activation="softmax",
     output_all: bool = False,
@@ -350,25 +351,31 @@ def MobileNetV3Split(
         however, they do not utilize any of the advanced blocks (squeeze-and-excite units,
         hard-swish, and 5x5 convolutions). While these models are less efficient on CPU, they
         are much more performant on GPU/DSP.
-    include_top : bool
-        whether to include the fully-connected layer at the top of the network. Defaults to `True`.
+    include_mixer : bool, default True
+        whether or not to include a mixer submodel to mix all grid cells into a single grid cell.
+        The output of the submodel has 1x1 grid size.
+    include_top : bool, default True
+        whether to include the fully-connected layer at the top of the network. Only valid if
+        `include_mixer` is True.
     pooling : str, optional
-        Optional pooling mode for feature extraction when `include_top` is `False`.
+        Optional pooling mode for feature extraction when `include_top` is False and
+        `include_mixer` is True.
         - `None` means that the output of the model will be the 4D tensor output of the last
           convolutional block.
         - `avg` means that global average pooling will be applied to the output of the last
           convolutional block, and thus the output of the model will be a 2D tensor.
         - `max` means that global max pooling will be applied.
     classes : int, optional
-        Optional number of classes to classify images into, only to be specified if `include_top`
-        is True.
+        Optional number of classes to classify images into, only to be specified if `include_mixer`
+        and `include_top` are True.
     dropout_rate : float
-        fraction of the input units to drop on the last layer.
+        fraction of the input units to drop on the last layer. Only to be specified if
+        `include_mixer` and `include_top` are True.
     classifier_activation : object
         A `str` or callable. The activation function to use on the "top" layer. Ignored unless
-        `include_top=True`. Set `classifier_activation=None` to return the logits of the "top"
-        layer. When loading pretrained weights, `classifier_activation` can only be `None` or
-        `"softmax"`.
+        `include_mixer` and `include_top` are True. Set `classifier_activation=None` to return the
+        logits of the "top" layer. When loading pretrained weights, `classifier_activation` can
+        only be `None` or `"softmax"`.
     output_all : bool
         If True, the model returns the output tensor of every submodel other than the input layer.
         Otherwise, it returns the output tensor of the last submodel.
@@ -409,38 +416,39 @@ def MobileNetV3Split(
         else:
             outputs = [x]
 
-    if model_type == "Large":
-        last_point_ch = 1280
-    else:
-        last_point_ch = 1024
-    mixer_block = MobileNetV3Mixer(
-        x,
-        last_point_ch,
-        alpha=alpha,
-        model_type=model_type,
-        minimalistic=minimalistic,
-    )
-    x = mixer_block(x)
-    if output_all:
-        outputs.append(x)
-    else:
-        outputs = [x]
-
-    output_block = MobileNetV3Output(
-        x,
-        model_type=model_type,
-        include_top=include_top,
-        classes=classes,
-        pooling=pooling,
-        dropout_rate=dropout_rate,
-        classifier_activation=classifier_activation,
-    )
-    if output_block is not None:
-        x = output_block(x)
+    if include_mixer:
+        if model_type == "Large":
+            last_point_ch = 1280
+        else:
+            last_point_ch = 1024
+        mixer_block = MobileNetV3Mixer(
+            x,
+            last_point_ch,
+            alpha=alpha,
+            model_type=model_type,
+            minimalistic=minimalistic,
+        )
+        x = mixer_block(x)
         if output_all:
             outputs.append(x)
         else:
             outputs = [x]
+
+        output_block = MobileNetV3Output(
+            x,
+            model_type=model_type,
+            include_top=include_top,
+            classes=classes,
+            pooling=pooling,
+            dropout_rate=dropout_rate,
+            classifier_activation=classifier_activation,
+        )
+        if output_block is not None:
+            x = output_block(x)
+            if output_all:
+                outputs.append(x)
+            else:
+                outputs = [x]
 
     # Create model.
     model = models.Model(

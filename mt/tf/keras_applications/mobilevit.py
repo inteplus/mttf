@@ -1,22 +1,10 @@
-# Copyright 2020 The TensorFlow Authors. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# ==============================================================================
 # pylint: disable=invalid-name
 # pylint: disable=missing-function-docstring
 """MobileViT model.
 
-Add the reference here. One for the paper, the other for keras page.
+Most of the code here has been ripped off from the following
+`Keras tutorial <https://keras.io/examples/vision/mobilevit/>`_. Please refer
+to the MobileViT ICLR2022 paper for more details.
 """
 
 
@@ -26,15 +14,30 @@ from mt import tf
 
 
 try:
+    from tensorflow.keras.applications.mobilenet_v3 import _inverted_res_block
+except ImportError:
+    try:
+        from keras.applications.mobilenet_v3 import _inverted_res_block
+    except:
+        from .mobilenet_v3 import _inverted_res_block
+
+
+try:
+    import keras
     from keras import backend
     from keras import models
     from keras.layers import VersionAwareLayers
-    from keras.utils import data_utils, layer_utils
 except ImportError:
-    from tensorflow.python.keras import backend
-    from tensorflow.python.keras import models
-    from tensorflow.python.keras.layers import VersionAwareLayers
-    from tensorflow.python.keras.utils import data_utils, layer_utils
+    try:
+        from tensorflow import keras
+        from tensorflow.keras import backend
+        from tensorflow.keras import models
+        from tensorflow.keras.layers import VersionAwareLayers
+    except ImportError:
+        from tensorflow.python import keras
+        from tensorflow.python.keras import backend
+        from tensorflow.python.keras import models
+        from tensorflow.python.keras.layers import VersionAwareLayers
 
 
 layers = VersionAwareLayers()
@@ -50,24 +53,20 @@ def conv_block(x, filters=16, kernel_size=3, strides=2):
 # Reference: https://git.io/JKgtC
 
 
-def inverted_residual_block(x, expanded_channels, output_channels, strides=1):
-    m = layers.Conv2D(expanded_channels, 1, padding="same", use_bias=False)(x)
-    m = layers.BatchNormalization()(m)
-    m = tf.nn.swish(m)
+def inverted_residual_block(x, expanded_channels, output_channels, strides=1, block_id=0):
+    channel_axis = 1 if backend.image_data_format() == 'channels_first' else -1
+    infilters = backend.int_shape(x)[channel_axis]
 
-    if strides == 2:
-        m = layers.ZeroPadding2D(padding=imagenet_utils.correct_pad(m, 3))(m)
-    m = layers.DepthwiseConv2D(
-        3, strides=strides, padding="same" if strides == 1 else "valid", use_bias=False
-    )(m)
-    m = layers.BatchNormalization()(m)
-    m = tf.nn.swish(m)
+    m = _inverted_res_block(
+        x,
+        expanded_channels // infilters,  # expansion
+        output_channels,  # filters
+        strides,  # stride
+        0,  # se_ratio
+        tf.nn.swish,  # activation
+        block_id,
+    )
 
-    m = layers.Conv2D(output_channels, 1, padding="same", use_bias=False)(m)
-    m = layers.BatchNormalization()(m)
-
-    if tf.math.equal(x.shape[-1], output_channels) and strides == 1:
-        return layers.Add()([m, x])
     return m
 
 
@@ -138,3 +137,50 @@ def mobilevit_block(x, num_blocks, projection_dim, strides=1):
     )
 
     return local_global_features
+
+
+def create_mobilevit(num_classes=5):
+    inputs = keras.Input((image_size, image_size, 3))
+    x = layers.Rescaling(scale=1.0 / 255)(inputs)
+
+    # Initial conv-stem -> MV2 block.
+    x = conv_block(x, filters=16)
+    x = inverted_residual_block(
+        x, expanded_channels=16 * expansion_factor, output_channels=16
+    )
+
+    # Downsampling with MV2 block.
+    x = inverted_residual_block(
+        x, expanded_channels=16 * expansion_factor, output_channels=24, strides=2
+    )
+    x = inverted_residual_block(
+        x, expanded_channels=24 * expansion_factor, output_channels=24
+    )
+    x = inverted_residual_block(
+        x, expanded_channels=24 * expansion_factor, output_channels=24
+    )
+
+    # First MV2 -> MobileViT block.
+    x = inverted_residual_block(
+        x, expanded_channels=24 * expansion_factor, output_channels=48, strides=2
+    )
+    x = mobilevit_block(x, num_blocks=2, projection_dim=64)
+
+    # Second MV2 -> MobileViT block.
+    x = inverted_residual_block(
+        x, expanded_channels=64 * expansion_factor, output_channels=64, strides=2
+    )
+    x = mobilevit_block(x, num_blocks=4, projection_dim=80)
+
+    # Third MV2 -> MobileViT block.
+    x = inverted_residual_block(
+        x, expanded_channels=80 * expansion_factor, output_channels=80, strides=2
+    )
+    x = mobilevit_block(x, num_blocks=3, projection_dim=96)
+    x = conv_block(x, filters=320, kernel_size=1, strides=1)
+
+    # Classification head.
+    x = layers.GlobalAvgPool2D()(x)
+    outputs = layers.Dense(num_classes, activation="softmax")(x)
+
+    return keras.Model(inputs, outputs)

@@ -17,6 +17,6 @@ def as_floatx(x):
     from mt import np
     from tensorflow import keras
 
-    if not np.issubdtype(x.dtype.as_numpy_type, np.floating):
+    if not np.issubdtype(x.dtype.as_numpy_dtype, np.floating):
         x = x.astype(keras.backend.floatx(), copy=False)
     return x

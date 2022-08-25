@@ -15,8 +15,8 @@ def as_floatx(x):
     '''Ensures that a tensor is of dtype floatx.'''
 
     from mt import np
-    from tensorflow import keras
+    import tensorflow as tf
 
     if not np.issubdtype(x.dtype.as_numpy_dtype, np.floating):
-        x = x.astype(keras.backend.floatx(), copy=False)
+        x = tf.cast(x, tf.keras.backend.floatx())
     return x

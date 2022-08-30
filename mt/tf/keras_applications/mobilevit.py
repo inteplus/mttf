@@ -146,35 +146,42 @@ def create_mobilevit(num_classes=5):
     # Initial conv-stem -> MV2 block.
     x = conv_block(x, filters=16)
     x = inverted_residual_block(
-        x, expanded_channels=16 * expansion_factor, output_channels=16
+        x, expanded_channels=16 * expansion_factor, output_channels=16,
+        block_id=1,
     )
 
     # Downsampling with MV2 block.
     x = inverted_residual_block(
-        x, expanded_channels=16 * expansion_factor, output_channels=24, strides=2
+        x, expanded_channels=16 * expansion_factor, output_channels=24, strides=2,
+        block_id=2,
     )
     x = inverted_residual_block(
-        x, expanded_channels=24 * expansion_factor, output_channels=24
+        x, expanded_channels=24 * expansion_factor, output_channels=24,
+        block_id=3,
     )
     x = inverted_residual_block(
-        x, expanded_channels=24 * expansion_factor, output_channels=24
+        x, expanded_channels=24 * expansion_factor, output_channels=24,
+        block_id=4,
     )
 
     # First MV2 -> MobileViT block.
     x = inverted_residual_block(
-        x, expanded_channels=24 * expansion_factor, output_channels=48, strides=2
+        x, expanded_channels=24 * expansion_factor, output_channels=48, strides=2,
+        block_id=5,
     )
     x = mobilevit_block(x, num_blocks=2, projection_dim=64)
 
     # Second MV2 -> MobileViT block.
     x = inverted_residual_block(
-        x, expanded_channels=64 * expansion_factor, output_channels=64, strides=2
+        x, expanded_channels=64 * expansion_factor, output_channels=64, strides=2,
+        block_id=6,
     )
     x = mobilevit_block(x, num_blocks=4, projection_dim=80)
 
     # Third MV2 -> MobileViT block.
     x = inverted_residual_block(
-        x, expanded_channels=80 * expansion_factor, output_channels=80, strides=2
+        x, expanded_channels=80 * expansion_factor, output_channels=80, strides=2,
+        block_id=7,
     )
     x = mobilevit_block(x, num_blocks=3, projection_dim=96)
     x = conv_block(x, filters=320, kernel_size=1, strides=1)

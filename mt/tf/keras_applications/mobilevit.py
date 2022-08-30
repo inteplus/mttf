@@ -185,7 +185,7 @@ def mobilevit_block(x, num_blocks, projection_dim, strides=1):
     )
     local_global_features = layers.Concatenate(axis=-1)([x, folded_feature_map])
 
-    # Fuse the local and global features using a convoluion layer.
+    # Fuse the local and global features using a convolution layer.
     local_global_features = conv_block(
         local_global_features, filters=projection_dim, strides=strides
     )

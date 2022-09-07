@@ -353,8 +353,7 @@ def MobileNetV3Split(
     alpha: float = 1.0,
     model_type: str = "Large",
     minimalistic: bool = False,
-    include_mixer: bool = True,
-    mixer_type: str = "mobilenet",
+    mixer_type: tp.Optional[str] = "mobilenet",
     mha_params: tp.Optional[tfc.MHAParams] = None,
     include_top: bool = True,
     pooling=None,
@@ -393,31 +392,36 @@ def MobileNetV3Split(
         however, they do not utilize any of the advanced blocks (squeeze-and-excite units,
         hard-swish, and 5x5 convolutions). While these models are less efficient on CPU, they
         are much more performant on GPU/DSP.
-    include_mixer : bool, default True
-        whether or not to include a mixer submodel to mix all grid cells into a single grid cell.
-        The output of the submodel has 1x1 grid size.
+    mixer_type : {'mobilenet', 'maxpool', 'mha', None}
+        Type of the mixer block, if used at all. If None is specified, no mixer block is used.
+        Otherwise the output has 1x1 spatial resolution. If 'mobilenet' is specified, the mixer
+        follows 'mobilenet' style, includnig mainly 2 Conv layers and one GlobalAveragePooling2D
+        layer. If 'maxpool' is specified, grid processing is just a GlobalMaxPool2D layer. If
+        'mha' is specified, a MultiHeadAttention layer is used.
+    mha_params : mt.tfc.MHAParams
+        The parameters defining the MultiHeadAttention layer. Only valid for 'mha' mixer type.
     include_top : bool, default True
         whether to include the fully-connected layer at the top of the network. Only valid if
-        `include_mixer` is True.
+        `mixer_type` is not null.
     pooling : str, optional
         Optional pooling mode for feature extraction when `include_top` is False and
-        `include_mixer` is True.
+        `mixer_type` is not null.
         - `None` means that the output of the model will be the 4D tensor output of the last
           convolutional block.
         - `avg` means that global average pooling will be applied to the output of the last
           convolutional block, and thus the output of the model will be a 2D tensor.
         - `max` means that global max pooling will be applied.
     classes : int, optional
-        Optional number of classes to classify images into, only to be specified if `include_mixer`
-        and `include_top` are True.
+        Optional number of classes to classify images into, only to be specified if `mixer_type`
+        is not null and `include_top` is True.
     dropout_rate : float
         fraction of the input units to drop on the last layer. Only to be specified if
-        `include_mixer` and `include_top` are True.
+        `mixer_type` is not null and `include_top` is True.
     classifier_activation : object
         A `str` or callable. The activation function to use on the "top" layer. Ignored unless
-        `include_mixer` and `include_top` are True. Set `classifier_activation=None` to return the
-        logits of the "top" layer. When loading pretrained weights, `classifier_activation` can
-        only be `None` or `"softmax"`.
+        `mixer_type` is not null and `include_top` is True. Set `classifier_activation=None` to
+        return the logits of the "top" layer. When loading pretrained weights,
+        `classifier_activation` can only be `None` or `"softmax"`.
     output_all : bool
         If True, the model returns the output tensor of every submodel other than the input layer.
         Otherwise, it returns the output tensor of the last submodel.
@@ -428,10 +432,6 @@ def MobileNetV3Split(
     -------
     tensorflow.keras.Model
         the output MobileNetV3 model split into 5 submodels
-
-    TODO
-    ----
-    Docstring 'mixer_type', 'mha_params' arguments.
     """
 
     input_layer = MobileNetV3Input(input_shape=input_shape)
@@ -464,7 +464,7 @@ def MobileNetV3Split(
         else:
             outputs = [x]
 
-    if include_mixer:
+    if isinstance(mixer_type, str):
         if model_type == "Large":
             last_point_ch = 1280
         else:
@@ -499,6 +499,8 @@ def MobileNetV3Split(
                 outputs.append(x)
             else:
                 outputs = [x]
+    elif mixer_type is not None:
+        raise tfc.ModelSyntaxError("Unknown mixer type: {}.".format(mixer_type))
 
     # Create model.
     if name is None:

@@ -33,6 +33,7 @@ no pre-trained weights exist.
 
 
 import typing as tp
+from mt import tfc
 
 
 __all__ = [
@@ -93,7 +94,7 @@ def MobileNetV3Input(
     rows = input_shape[row_axis]
     cols = input_shape[col_axis]
     if rows and cols and (rows < 32 or cols < 32):
-        raise ValueError(
+        raise tfc.ModelSyntaxError(
             "Input size must be at least 32x32; got `input_shape="
             + str(input_shape)
             + "`"
@@ -233,43 +234,81 @@ def MobileNetV3Mixer(
     alpha=1.0,
     model_type: str = "Large",  # only 'Small' or 'Large' are accepted
     minimalistic=False,
+    mixer_type: str = "mobilenet",
+    mha_params: tp.Optional[tfc.MHAParams] = None,
 ):
     """Prepares a MobileNetV3 mixer block."""
 
     x = input_tensor
-    channel_axis = 1 if backend.image_data_format() == "channels_first" else -1
 
-    if minimalistic:
-        kernel = 3
-        activation = relu
-        se_ratio = None
+    if mixer_type == "mobilenet":
+        channel_axis = 1 if backend.image_data_format() == "channels_first" else -1
+
+        if minimalistic:
+            kernel = 3
+            activation = relu
+            se_ratio = None
+        else:
+            kernel = 5
+            activation = hard_swish
+            se_ratio = 0.25
+
+        last_conv_ch = _depth(backend.int_shape(x)[channel_axis] * 6)
+
+        # if the width multiplier is greater than 1 we
+        # increase the number of output channels
+        if alpha > 1.0:
+            last_point_ch = _depth(last_point_ch * alpha)
+        x = layers.Conv2D(
+            last_conv_ch, kernel_size=1, padding="same", use_bias=False, name="Conv_1"
+        )(x)
+        x = layers.BatchNormalization(
+            axis=channel_axis, epsilon=1e-3, momentum=0.999, name="Conv_1/BatchNorm"
+        )(x)
+        x = activation(x)
+        x = layers.GlobalAveragePooling2D()(x)
+        if channel_axis == 1:
+            x = layers.Reshape((last_conv_ch, 1, 1))(x)
+        else:
+            x = layers.Reshape((1, 1, last_conv_ch))(x)
+        x = layers.Conv2D(
+            last_point_ch, kernel_size=1, padding="same", use_bias=True, name="Conv_2"
+        )(x)
+        x = activation(x)
+    elif mixer_type == "maxpool":
+        x = layers.GlobalMaxPool2D(x)
+    elif mixer_type == "mha":
+        if backend.image_data_format() == "channels_first":
+            raise tfc.ModelSyntaxError(
+                "Mixer type MHA requires channels_last image data format."
+            )
+
+        n_heads = mha_params.n_heads
+        input_dim = x.shape[-1]
+        if mha_params.key_dim is None:
+            if input_dim % n_heads != 0:
+                raise tfc.ModelSyntaxError(
+                    "The last dimension ({}) is not divisible by {}.".format(
+                        input_dim, n_heads
+                    )
+                )
+            key_dim = input_dim // n_heads
+        else:
+            key_dim = mha_params.key_dim
+        fake_input = tf.eye(1, num_columns=input_dim)[
+            tf.newaxis, tf.newaxis, ...
+        ]  # (B=1, H=1, W=1, D=input_dim)
+        fake_input = tf.repeat(fake_input, tf.shape(x)[0:1], axis=0)
+        layer = kl.MultiHeadAttention(
+            n_heads,
+            key_dim,
+            value_dim=mha_params.value_dim,
+            output_shape=mha_params.output_shape,
+            attention_axes=(1, 2),
+        )
+        x = layer(fake_input, x)
     else:
-        kernel = 5
-        activation = hard_swish
-        se_ratio = 0.25
-
-    last_conv_ch = _depth(backend.int_shape(x)[channel_axis] * 6)
-
-    # if the width multiplier is greater than 1 we
-    # increase the number of output channels
-    if alpha > 1.0:
-        last_point_ch = _depth(last_point_ch * alpha)
-    x = layers.Conv2D(
-        last_conv_ch, kernel_size=1, padding="same", use_bias=False, name="Conv_1"
-    )(x)
-    x = layers.BatchNormalization(
-        axis=channel_axis, epsilon=1e-3, momentum=0.999, name="Conv_1/BatchNorm"
-    )(x)
-    x = activation(x)
-    x = layers.GlobalAveragePooling2D()(x)
-    if channel_axis == 1:
-        x = layers.Reshape((last_conv_ch, 1, 1))(x)
-    else:
-        x = layers.Reshape((1, 1, last_conv_ch))(x)
-    x = layers.Conv2D(
-        last_point_ch, kernel_size=1, padding="same", use_bias=True, name="Conv_2"
-    )(x)
-    x = activation(x)
+        raise tfc.ModelSyntaxError("Unknown mixer type: '{}'.".format(mixer_type))
 
     # Create model.
     model = models.Model(input_tensor, x, name="MobilenetV3{}Mixer".format(model_type))
@@ -315,6 +354,8 @@ def MobileNetV3Split(
     model_type: str = "Large",
     minimalistic: bool = False,
     include_mixer: bool = True,
+    mixer_type: str = "mobilenet",
+    mha_params: tp.Optional[tfc.MHAParams] = None,
     include_top: bool = True,
     pooling=None,
     classes: int = 1000,
@@ -387,6 +428,10 @@ def MobileNetV3Split(
     -------
     tensorflow.keras.Model
         the output MobileNetV3 model split into 5 submodels
+
+    TODO
+    ----
+    Docstring 'mixer_type', 'mha_params' arguments.
     """
 
     input_layer = MobileNetV3Input(input_shape=input_shape)
@@ -430,6 +475,8 @@ def MobileNetV3Split(
             alpha=alpha,
             model_type=model_type,
             minimalistic=minimalistic,
+            mixer_type=mixer_type,
+            mha_params=mha_params,
         )
         x = mixer_block(x)
         if output_all:

@@ -12,7 +12,7 @@ The paper authors' code is `here <https://github.com/apple/ml-cvnets>`_.
 
 import typing as tp
 
-from mt import tf
+from mt import tfc, tf
 
 
 try:
@@ -128,14 +128,14 @@ def mobilevit_block(x, num_blocks, projection_dim, strides=1):
     )
 
     if x.shape[1] % cell_size != 0:
-        raise ValueError(
+        raise tfc.ModelSyntaxError(
             "Input tensor must have height divisible by {}. Got {}.".format(
                 cell_size, x.shape
             )
         )
 
     if x.shape[2] % cell_size != 0:
-        raise ValueError(
+        raise tfc.ModelSyntaxError(
             "Input tensor must have width divisible by {}. Got {}.".format(
                 cell_size, x.shape
             )

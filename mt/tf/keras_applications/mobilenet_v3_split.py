@@ -303,8 +303,7 @@ def MobileNetV3Mixer(
         )
         x = layer(x)
         x_shape = tf.shape(x)
-        last_shape = tf.reduce_prod(x_shape[1:3], axis=0, keepdims=True)
-        x_shape = tf.concat([x_shape[0:1], [1, 1], last_shape], axis=0)
+        x_shape = tf.concat([x_shape[0:1], [1, 1], n_heads * value_dim], axis=0)
         x = tf.reshape(x, x_shape)
     else:
         raise tfc.ModelSyntaxError("Unknown mixer type: '{}'.".format(mixer_type))

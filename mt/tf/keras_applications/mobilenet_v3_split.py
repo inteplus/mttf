@@ -298,9 +298,8 @@ def MobileNetV3Mixer(
             key_dim = input_dim // n_heads
         else:
             key_dim = mha_params.key_dim
-        layer = SimpleMHA2D(
-            num_heads=n_heads, key_dim=key_dim, value_dim=mha_params.value_dim
-        )
+        value_dim = key_dim if mha_params.value_dim is None else mha_params.value_dim
+        layer = SimpleMHA2D(num_heads=n_heads, key_dim=key_dim, value_dim=value_dim)
         x = layer(x)
         x_shape = tf.shape(x)
         x_shape = tf.concat([x_shape[0:1], [1, 1], n_heads * value_dim], axis=0)

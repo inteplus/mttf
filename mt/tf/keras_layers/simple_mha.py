@@ -182,8 +182,6 @@ class SimpleMHA(Layer):
       value_dim: Size of each attention head for value.
       dropout: Dropout probability.
       use_bias: Boolean, whether the dense layers use bias vectors/matrices.
-      output_shape: The expected shape of an output tensor, besides the batch and
-        sequence dims. If not specified, projects back to the key feature dim.
       attention_axes: axes over which the attention is applied. `None` means
         attention over all axes, but batch, heads, and features.
       kernel_initializer: Initializer for dense layer kernels.
@@ -215,8 +213,7 @@ class SimpleMHA(Layer):
     Returns:
       attention_output: The result of the computation, of shape `(B, T, E)`,
         where `T` is for target sequence shapes and `E` is the query input last
-        dimension if `output_shape` is `None`. Otherwise, the multi-head outputs
-        are project to the shape specified by `output_shape`.
+        dimension.
       attention_scores: [Optional] multi-head attention coeffients over
         attention axes.
     """
@@ -228,7 +225,6 @@ class SimpleMHA(Layer):
         value_dim=None,
         dropout=0.0,
         use_bias=True,
-        output_shape=None,
         attention_axes=None,
         kernel_initializer="glorot_uniform",
         bias_initializer="zeros",
@@ -245,7 +241,6 @@ class SimpleMHA(Layer):
         self._value_dim = value_dim if value_dim else key_dim
         self._dropout = dropout
         self._use_bias = use_bias
-        self._output_shape = output_shape
         self._kernel_initializer = initializers.get(kernel_initializer)
         self._bias_initializer = initializers.get(bias_initializer)
         self._kernel_regularizer = regularizers.get(kernel_regularizer)
@@ -268,7 +263,6 @@ class SimpleMHA(Layer):
             "value_dim": self._value_dim,
             "dropout": self._dropout,
             "use_bias": self._use_bias,
-            "output_shape": self._output_shape,
             "attention_axes": self._attention_axes,
             "kernel_initializer": initializers.serialize(self._kernel_initializer),
             "bias_initializer": initializers.serialize(self._bias_initializer),
@@ -386,38 +380,6 @@ class SimpleMHA(Layer):
             # These computations could be wrapped into the keras attention layer once
             # it support mult-head einsum computations.
             self._build_attention(output_rank)
-            self._output_dense = self._make_output_dense(
-                free_dims, common_kwargs, "attention_output"
-            )
-
-    def _make_output_dense(self, free_dims, common_kwargs, name=None):
-        """Builds the output projection matrix.
-
-        Args:
-          free_dims: Number of free dimensions for einsum equation building.
-          common_kwargs: Common keyword arguments for einsum layer.
-          name: Name for the projection layer.
-
-        Returns:
-          Projection layer.
-        """
-        if self._output_shape:
-            if not isinstance(self._output_shape, collections.abc.Sized):
-                output_shape = [self._output_shape]
-            else:
-                output_shape = self._output_shape
-        else:
-            output_shape = [self._query_shape[-1]]
-        einsum_equation, bias_axes, output_rank = _build_proj_equation(
-            free_dims, bound_dims=2, output_dims=len(output_shape)
-        )
-        return einsum_dense.EinsumDense(
-            einsum_equation,
-            output_shape=_get_output_shape(output_rank - 1, output_shape),
-            bias_axes=bias_axes if self._use_bias else None,
-            name=name,
-            **common_kwargs
-        )
 
     def _build_attention(self, rank):
         """Builds multi-head dot-product attention computations.
@@ -530,7 +492,6 @@ class SimpleMHA(Layer):
         attention_output, attention_scores = self._compute_attention(
             query, key, value, attention_mask, training
         )
-        attention_output = self._output_dense(attention_output)
 
         if return_attention_scores:
             return attention_output, attention_scores

@@ -133,6 +133,15 @@ def _get_output_shape(output_rank, known_last_dims):
 class SimpleMHA(Layer):
     """SimpleMHA layer.
 
+    This is a simplified version of the Keras-based MultiHeadAttention layer.
+
+      - There is no matrix projection at the output. The output_shape EinsumDense
+        layer has been removed.
+      - The query tensor is managed internally rather as input tensor. The user has
+        to specify the shape of the query tensor at layer construction time.
+
+    Update the docstring please!
+
     This is an implementation of multi-headed attention as described in the paper
     "Attention is all you Need" (Vaswani et al., 2017).
     If `query`, `key,` `value` are the same, then
@@ -158,8 +167,7 @@ class SimpleMHA(Layer):
     Performs 1D cross-attention over two sequence inputs with an attention mask.
     Returns the additional attention weights over heads.
 
-    >>> layer = SimpleMHA(num_heads=2, key_dim=2)
-    >>> target = tf.keras.Input(shape=[8, 16])
+    >>> layer = SimpleMHA(query_shape=[8, 2, 2])
     >>> source = tf.keras.Input(shape=[4, 16])
     >>> output_tensor, weights = layer(target, source,
     ...                                return_attention_scores=True)
@@ -177,8 +185,9 @@ class SimpleMHA(Layer):
     (None, 5, 3, 4, 16)
 
     Args:
-      num_heads: Number of attention heads.
-      key_dim: Size of each attention head for query and key.
+      query_shape: list or tuple representing the target shape (without batch size).
+        It must contain at least 2 items where the last item is `key_dim` and the
+        second last item is `num_heads`.
       value_dim: Size of each attention head for value.
       dropout: Dropout probability.
       use_bias: Boolean, whether the dense layers use bias vectors/matrices.
@@ -193,7 +202,6 @@ class SimpleMHA(Layer):
       bias_constraint: Constraint for dense layer kernels.
 
     Call arguments:
-      query: Query `Tensor` of shape `(B, T, dim)`.
       value: Value `Tensor` of shape `(B, S, dim)`.
       key: Optional key `Tensor` of shape `(B, S, dim)`. If not given, will use
         `value` for both `key` and `value`, which is the most common case.
@@ -220,8 +228,7 @@ class SimpleMHA(Layer):
 
     def __init__(
         self,
-        num_heads,
-        key_dim,
+        query_shape,
         value_dim=None,
         dropout=0.0,
         use_bias=True,
@@ -236,9 +243,14 @@ class SimpleMHA(Layer):
         **kwargs
     ):
         super(SimpleMHA, self).__init__(**kwargs)
-        self._num_heads = num_heads
-        self._key_dim = key_dim
-        self._value_dim = value_dim if value_dim else key_dim
+        self._query_shape = query_shape
+        self._query = self.add_weight(
+            name="query",
+            shape=query_shape,
+            initializer="random_normal",
+            trainable=True,
+        )
+        self._value_dim = value_dim if value_dim else query_shape[-1]
         self._dropout = dropout
         self._use_bias = use_bias
         self._kernel_initializer = initializers.get(kernel_initializer)
@@ -254,12 +266,11 @@ class SimpleMHA(Layer):
         else:
             self._attention_axes = attention_axes
         self._built_from_signature = False
-        self._query_shape, self._key_shape, self._value_shape = None, None, None
+        self._key_shape, self._value_shape = None, None
 
     def get_config(self):
         config = {
-            "num_heads": self._num_heads,
-            "key_dim": self._key_dim,
+            "query_shape": list(self._query_shape),
             "value_dim": self._value_dim,
             "dropout": self._dropout,
             "use_bias": self._use_bias,
@@ -271,7 +282,6 @@ class SimpleMHA(Layer):
             "activity_regularizer": regularizers.serialize(self._activity_regularizer),
             "kernel_constraint": constraints.serialize(self._kernel_constraint),
             "bias_constraint": constraints.serialize(self._bias_constraint),
-            "query_shape": self._query_shape,
             "key_shape": self._key_shape,
             "value_shape": self._value_shape,
         }
@@ -282,11 +292,10 @@ class SimpleMHA(Layer):
     def from_config(cls, config):
         # If the layer has a different build() function from the Keras default,
         # we need to trigger the customized build to create weights.
-        query_shape = config.pop("query_shape")
         key_shape = config.pop("key_shape")
         value_shape = config.pop("value_shape")
         layer = cls(**config)
-        if None in [query_shape, key_shape, value_shape]:
+        if None in [key_shape, value_shape]:
             logging.warning(
                 "One of dimensions of the input shape is missing. It should have been"
                 " memorized when the layer was serialized. "
@@ -295,25 +304,20 @@ class SimpleMHA(Layer):
             )
         else:
             layer._build_from_signature(
-                query_shape, value_shape, key_shape
+                value_shape, key_shape
             )  # pylint: disable=protected-access
         return layer
 
-    def _build_from_signature(self, query, value, key=None):
+    def _build_from_signature(self, value, key=None):
         """Builds layers and variables.
 
         Once the method is called, self._built_from_signature will be set to True.
 
         Args:
-          query: Query tensor or TensorShape.
           value: Value tensor or TensorShape.
           key: Key tensor or TensorShape.
         """
         self._built_from_signature = True
-        if hasattr(query, "shape"):
-            self._query_shape = tensor_shape.TensorShape(query.shape)
-        else:
-            self._query_shape = tensor_shape.TensorShape(query)
         if hasattr(value, "shape"):
             self._value_shape = tensor_shape.TensorShape(value.shape)
         else:
@@ -338,26 +342,13 @@ class SimpleMHA(Layer):
         # to avoid creating symbolic Tensors that will later pollute any eager
         # operations.
         with tf_utils.maybe_init_scope(self):
-            free_dims = self._query_shape.rank - 1
-            einsum_equation, bias_axes, output_rank = _build_proj_equation(
-                free_dims, bound_dims=1, output_dims=2
-            )
-            self._query_dense = einsum_dense.EinsumDense(
-                einsum_equation,
-                output_shape=_get_output_shape(
-                    output_rank - 1, [self._num_heads, self._key_dim]
-                ),
-                bias_axes=bias_axes if self._use_bias else None,
-                name="query",
-                **common_kwargs
-            )
             einsum_equation, bias_axes, output_rank = _build_proj_equation(
                 self._key_shape.rank - 1, bound_dims=1, output_dims=2
             )
             self._key_dense = einsum_dense.EinsumDense(
                 einsum_equation,
                 output_shape=_get_output_shape(
-                    output_rank - 1, [self._num_heads, self._key_dim]
+                    output_rank - 1, [self._query_shape[-2], self._query_shape[-1]]
                 ),
                 bias_axes=bias_axes if self._use_bias else None,
                 name="key",
@@ -369,7 +360,7 @@ class SimpleMHA(Layer):
             self._value_dense = einsum_dense.EinsumDense(
                 einsum_equation,
                 output_shape=_get_output_shape(
-                    output_rank - 1, [self._num_heads, self._value_dim]
+                    output_rank - 1, [self._query_shape[-2], self._value_dim]
                 ),
                 bias_axes=bias_axes if self._use_bias else None,
                 name="value",
@@ -442,7 +433,7 @@ class SimpleMHA(Layer):
         # Note: Applying scalar multiply at the smaller end of einsum improves
         # XLA performance, but may introduce slight numeric differences in
         # the Transformer attention head.
-        query = math_ops.multiply(query, 1.0 / math.sqrt(float(self._key_dim)))
+        query = math_ops.multiply(query, 1.0 / math.sqrt(float(self._query_shape[-1])))
 
         # Take the dot product between "query" and "key" to get the raw
         # attention scores.
@@ -466,22 +457,24 @@ class SimpleMHA(Layer):
 
     def call(
         self,
-        query,
         value,
         key=None,
         attention_mask=None,
         return_attention_scores=False,
         training=None,
     ):
+        import tensorflow as tf
+
         if not self._built_from_signature:
-            self._build_from_signature(query=query, value=value, key=key)
+            self._build_from_signature(value=value, key=key)
         if key is None:
             key = value
 
         #   N = `num_attention_heads`
         #   H = `size_per_head`
         # `query` = [B, T, N ,H]
-        query = self._query_dense(query)
+        query = self._query[tf.newaxis, ...]
+        query = tf.repeat(query, tf.shape(value)[0:1], axis=0)
 
         # `key` = [B, S, N, H]
         key = self._key_dense(key)

@@ -283,7 +283,7 @@ def MobileNetV3Mixer(
                 "Mixer type MHA requires channels_last image data format."
             )
 
-        from ..keras_layers import SimpleMHA
+        from ..keras_layers import SimpleMHA2D
 
         n_heads = mha_params.n_heads
         input_dim = x.shape[-1]
@@ -297,7 +297,7 @@ def MobileNetV3Mixer(
             key_dim = input_dim // n_heads
         else:
             key_dim = mha_params.key_dim
-        layer = SimpleMHA(
+        layer = SimpleMHA2D(
             num_heads=n_heads, key_dim=key_dim, value_dim=mha_params.value_dim
         )
         x = layer(x)

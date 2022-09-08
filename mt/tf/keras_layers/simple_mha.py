@@ -129,9 +129,9 @@ def _get_output_shape(output_rank, known_last_dims):
     return [None] * (output_rank - len(known_last_dims)) + list(known_last_dims)
 
 
-@keras_export("keras.layers.SimpleMHA")
-class SimpleMHA(Layer):
-    """SimpleMHA layer.
+@keras_export("keras.layers.SimpleMHA2D")
+class SimpleMHA2D(Layer):
+    """SimpleMHA2D layer.
 
     This is a simplified version of the Keras-based MultiHeadAttention layer.
 
@@ -167,7 +167,7 @@ class SimpleMHA(Layer):
     Performs 1D cross-attention over two sequence inputs with an attention mask.
     Returns the additional attention weights over heads.
 
-    >>> layer = SimpleMHA(query_shape=[8, 2, 2])
+    >>> layer = SimpleMHA2D(query_shape=[8, 2, 2])
     >>> source = tf.keras.Input(shape=[4, 16])
     >>> output_tensor, weights = layer(target, source,
     ...                                return_attention_scores=True)
@@ -178,7 +178,7 @@ class SimpleMHA(Layer):
 
     Performs 2D self-attention over a 5D input tensor on axes 2 and 3.
 
-    >>> layer = SimpleMHA(num_heads=2, key_dim=2, attention_axes=(2, 3))
+    >>> layer = SimpleMHA2D(num_heads=2, key_dim=2, attention_axes=(2, 3))
     >>> input_tensor = tf.keras.Input(shape=[5, 3, 4, 16])
     >>> output_tensor = layer(input_tensor, input_tensor)
     >>> print(output_tensor.shape)
@@ -231,258 +231,103 @@ class SimpleMHA(Layer):
         num_heads,
         key_dim,
         value_dim=None,
-        dropout=0.0,
         use_bias=True,
         kernel_initializer="glorot_uniform",
         bias_initializer="zeros",
         kernel_regularizer=None,
         bias_regularizer=None,
-        activity_regularizer=None,
-        kernel_constraint=None,
-        bias_constraint=None,
         **kwargs
     ):
-        super(SimpleMHA, self).__init__(**kwargs)
+        super(SimpleMHA2D, self).__init__(**kwargs)
         self._num_heads = num_heads
         self._key_dim = key_dim
-        self._query = self.add_weight(
-            name="query",
-            shape=[num_heads, key_dim],
-            initializer="random_normal",
-            trainable=True,
-        )
         self._value_dim = value_dim if value_dim else key_dim
-        self._dropout = dropout
         self._use_bias = use_bias
         self._kernel_initializer = initializers.get(kernel_initializer)
         self._bias_initializer = initializers.get(bias_initializer)
         self._kernel_regularizer = regularizers.get(kernel_regularizer)
         self._bias_regularizer = regularizers.get(bias_regularizer)
-        self._kernel_constraint = constraints.get(kernel_constraint)
-        self._bias_constraint = constraints.get(bias_constraint)
-        self._attention_axes = None
-        self._built_from_signature = False
-        self._key_shape, self._value_shape = None, None
+
+        self._query = self.add_weight(
+            name="query",
+            shape=[1, 1, num_heads, key_dim],
+            initializer="random_normal",
+            trainable=True,
+        )
+
+        import tensorflow as tf
+
+        self._key_proj = tf.keras.layers.Conv2D(
+            self._num_heads * self._key_dim,  # filters
+            1,  # kernel_size
+            use_bias=self._use_bias,
+            kernel_initializer=self._kernel_initializer,
+            bias_initializer=self._bias_initializer,
+            kernel_regularizer=self._kernel_regularizer,
+            bias_regularizer=self._bias_regularizer,
+        )
+
+        self._value_proj = tf.keras.layers.Conv2D(
+            self._num_heads * self._value_dim,  # filters
+            1,  # kernel_size
+            use_bias=self._use_bias,
+            kernel_initializer=self._kernel_initializer,
+            bias_initializer=self._bias_initializer,
+            kernel_regularizer=self._kernel_regularizer,
+            bias_regularizer=self._bias_regularizer,
+        )
+
+        self._softmax = tf.keras.layers.Softmax(axis=1)
+
+    def call(self, key_value, training=None):
+        import tensorflow as tf
+
+        bs_shape = outer_shape[0:1]
+        hw_shape = tf.reduce_prod(tf.shape(key_value)[1:3], axis=0, keepdims=True)
+
+        #   N = `num_attention_heads`
+        #   K = `key_dim`
+        #   V = `value_dim`
+        #   H = `image_height`
+        #   W = `image_width`
+        # `query` = [1, 1, N ,K]
+
+        # `key` = [B, H*W, N, K]
+        key = self._key_proj(key_value, training=training)
+        key_shape = tf.concat(
+            [bs_shape, hw_shape, [self._num_heads, self._key_dim]], axis=0
+        )
+        key = tf.reshape(key, key_shape)
+
+        # `value` = [B, H*W, N, V]
+        value = self._value_proj(value, training=training)
+        value_shape = tf.concat(
+            [bs_shape, hw_shape, [self._num_heads, self._value_dim]], axis=0
+        )
+        value = tf.reshape(value, value_shape)
+
+        # `dot_prod` = [B, H*W, N]
+        dot_prod = tf.reduce_sum(self._query * key, axis=-1)
+
+        # `softmax` = [B, H*W, N, 1]
+        softmax = self._softmax(dot_prod)
+        softmax = tf.expand_dims(softmax, axis=-1)
+
+        # `attention_output` = [B, N, V]
+        attention_output = tf.reduce_sum(softmax * value, axis=1)
+
+        return attention_output
 
     def get_config(self):
         config = {
             "num_heads": self._num_heads,
             "key_dim": self._key_dim,
             "value_dim": self._value_dim,
-            "dropout": self._dropout,
             "use_bias": self._use_bias,
-            "attention_axes": self._attention_axes,
             "kernel_initializer": initializers.serialize(self._kernel_initializer),
             "bias_initializer": initializers.serialize(self._bias_initializer),
             "kernel_regularizer": regularizers.serialize(self._kernel_regularizer),
             "bias_regularizer": regularizers.serialize(self._bias_regularizer),
-            "activity_regularizer": regularizers.serialize(self._activity_regularizer),
-            "kernel_constraint": constraints.serialize(self._kernel_constraint),
-            "bias_constraint": constraints.serialize(self._bias_constraint),
-            "key_shape": self._key_shape,
-            "value_shape": self._value_shape,
         }
-        base_config = super(SimpleMHA, self).get_config()
+        base_config = super(SimpleMHA2D, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
-
-    @classmethod
-    def from_config(cls, config):
-        # If the layer has a different build() function from the Keras default,
-        # we need to trigger the customized build to create weights.
-        key_shape = config.pop("key_shape")
-        value_shape = config.pop("value_shape")
-        layer = cls(**config)
-        if None in [key_shape, value_shape]:
-            logging.warning(
-                "One of dimensions of the input shape is missing. It should have been"
-                " memorized when the layer was serialized. "
-                "%s is created without weights.",
-                str(cls),
-            )
-        else:
-            layer._build_from_signature(
-                value_shape, key_shape
-            )  # pylint: disable=protected-access
-        return layer
-
-    def _build_from_signature(self, value, key=None):
-        """Builds layers and variables.
-
-        Once the method is called, self._built_from_signature will be set to True.
-
-        Args:
-          value: Value tensor or TensorShape.
-          key: Key tensor or TensorShape.
-        """
-        self._built_from_signature = True
-        if hasattr(value, "shape"):
-            self._value_shape = tensor_shape.TensorShape(value.shape)
-        else:
-            self._value_shape = tensor_shape.TensorShape(value)
-        if key is None:
-            self._key_shape = self._value_shape
-        elif hasattr(key, "shape"):
-            self._key_shape = tensor_shape.TensorShape(key.shape)
-        else:
-            self._key_shape = tensor_shape.TensorShape(key)
-
-        common_kwargs = dict(
-            kernel_initializer=self._kernel_initializer,
-            bias_initializer=self._bias_initializer,
-            kernel_regularizer=self._kernel_regularizer,
-            bias_regularizer=self._bias_regularizer,
-            activity_regularizer=self._activity_regularizer,
-            kernel_constraint=self._kernel_constraint,
-            bias_constraint=self._bias_constraint,
-        )
-        # Any setup work performed only once should happen in an `init_scope`
-        # to avoid creating symbolic Tensors that will later pollute any eager
-        # operations.
-        with tf_utils.maybe_init_scope(self):
-            einsum_equation, bias_axes, output_rank = _build_proj_equation(
-                self._key_shape.rank - 1, bound_dims=1, output_dims=2
-            )
-            self._key_dense = einsum_dense.EinsumDense(
-                einsum_equation,
-                output_shape=_get_output_shape(
-                    output_rank - 1, [self._num_heads, self._key_dim]
-                ),
-                bias_axes=bias_axes if self._use_bias else None,
-                name="key",
-                **common_kwargs
-            )
-            einsum_equation, bias_axes, output_rank = _build_proj_equation(
-                self._value_shape.rank - 1, bound_dims=1, output_dims=2
-            )
-            self._value_dense = einsum_dense.EinsumDense(
-                einsum_equation,
-                output_shape=_get_output_shape(
-                    output_rank - 1, [self._num_heads, self._value_dim]
-                ),
-                bias_axes=bias_axes if self._use_bias else None,
-                name="value",
-                **common_kwargs
-            )
-
-            # Builds the attention computations for multi-head dot product attention.
-            # These computations could be wrapped into the keras attention layer once
-            # it support mult-head einsum computations.
-            self._build_attention(output_rank)
-
-    def _build_attention(self, rank):
-        """Builds multi-head dot-product attention computations.
-
-        This function builds attributes necessary for `_compute_attention` to
-        costomize attention computation to replace the default dot-product
-        attention.
-
-        Args:
-          rank: the rank of query, key, value tensors.
-        """
-        if self._attention_axes is None:
-            self._attention_axes = tuple(range(1, rank - 2))
-        else:
-            self._attention_axes = tuple(self._attention_axes)
-        (
-            self._dot_product_equation,
-            self._combine_equation,
-            attn_scores_rank,
-        ) = _build_attention_equation(rank, attn_axes=self._attention_axes)
-        norm_axes = tuple(
-            range(attn_scores_rank - len(self._attention_axes), attn_scores_rank)
-        )
-        self._softmax = advanced_activations.Softmax(axis=norm_axes)
-        self._dropout_layer = core.Dropout(rate=self._dropout)
-
-    def _masked_softmax(self, attention_scores, attention_mask=None):
-        # Normalize the attention scores to probabilities.
-        # `attention_scores` = [B, N, T, S]
-        if attention_mask is not None:
-            # The expand dim happens starting from the `num_heads` dimension,
-            # (<batch_dims>, num_heads, <query_attention_dims, key_attention_dims>)
-            mask_expansion_axes = [-len(self._attention_axes) * 2 - 1]
-            for _ in range(len(attention_scores.shape) - len(attention_mask.shape)):
-                attention_mask = array_ops.expand_dims(
-                    attention_mask, axis=mask_expansion_axes
-                )
-        return self._softmax(attention_scores, attention_mask)
-
-    def _compute_attention(self, query, key, value, attention_mask=None, training=None):
-        """Applies Dot-product attention with query, key, value tensors.
-
-        This function defines the computation inside `call` with projected
-        multi-head Q, K, V inputs. Users can override this function for customized
-        attention implementation.
-
-        Args:
-          query: Projected query `Tensor` of shape `(B, T, N, key_dim)`.
-          key: Projected key `Tensor` of shape `(B, T, N, key_dim)`.
-          value: Projected value `Tensor` of shape `(B, T, N, value_dim)`.
-          attention_mask: a boolean mask of shape `(B, T, S)`, that prevents
-            attention to certain positions.
-          training: Python boolean indicating whether the layer should behave in
-            training mode (adding dropout) or in inference mode (doing nothing).
-
-        Returns:
-          attention_output: Multi-headed outputs of attention computation.
-          attention_scores: Multi-headed attention weights.
-        """
-        # Take the dot product between "query" and "key" to get the raw
-        # attention scores.
-        attention_scores = special_math_ops.einsum(
-            self._dot_product_equation, key, query
-        )
-
-        attention_scores = self._masked_softmax(attention_scores, attention_mask)
-
-        # This is actually dropping out entire tokens to attend to, which might
-        # seem a bit unusual, but is taken from the original Transformer paper.
-        attention_scores_dropout = self._dropout_layer(
-            attention_scores, training=training
-        )
-
-        # `context_layer` = [B, T, N, H]
-        attention_output = special_math_ops.einsum(
-            self._combine_equation, attention_scores_dropout, value
-        )
-        return attention_output, attention_scores
-
-    def call(
-        self,
-        value,
-        key=None,
-        attention_mask=None,
-        return_attention_scores=False,
-        training=None,
-    ):
-        import tensorflow as tf
-
-        if not self._built_from_signature:
-            self._build_from_signature(value=value, key=key)
-        if key is None:
-            key = value
-
-        #   N = `num_attention_heads`
-        #   H = `size_per_head`
-        # `query` = [B, T, N ,H]
-        bs_shape = tf.shape(value)[0:1]
-        expanded_shape = tf.constant(
-            [1] * (1 + len(self._attention_axes)), dtype=tf.int32
-        )
-        expanded_shape = tf.concat([expanded_shape, tf.shape(self._query)], axis=0)
-        query = tf.reshape(self._query, expanded_shape)
-        query = tf.repeat(query, bs_shape, axis=0)
-
-        # `key` = [B, S, N, H]
-        key = self._key_dense(key)
-
-        # `value` = [B, S, N, H]
-        value = self._value_dense(value)
-
-        attention_output, attention_scores = self._compute_attention(
-            query, key, value, attention_mask, training
-        )
-
-        if return_attention_scores:
-            return attention_output, attention_scores
-        return attention_output

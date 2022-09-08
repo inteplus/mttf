@@ -284,6 +284,7 @@ def MobileNetV3Mixer(
             )
 
         from ..keras_layers import SimpleMHA2D
+        import tensorflow as tf
 
         n_heads = mha_params.n_heads
         input_dim = x.shape[-1]

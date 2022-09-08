@@ -228,11 +228,11 @@ class SimpleMHA(Layer):
 
     def __init__(
         self,
-        query_shape,
+        num_heads,
+        key_dim,
         value_dim=None,
         dropout=0.0,
         use_bias=True,
-        attention_axes=None,
         kernel_initializer="glorot_uniform",
         bias_initializer="zeros",
         kernel_regularizer=None,
@@ -243,14 +243,15 @@ class SimpleMHA(Layer):
         **kwargs
     ):
         super(SimpleMHA, self).__init__(**kwargs)
-        self._query_shape = query_shape
+        self._num_heads = num_heads
+        self._key_dim = key_dim
         self._query = self.add_weight(
             name="query",
-            shape=query_shape,
+            shape=[num_heads, key_dim],
             initializer="random_normal",
             trainable=True,
         )
-        self._value_dim = value_dim if value_dim else query_shape[-1]
+        self._value_dim = value_dim if value_dim else key_dim
         self._dropout = dropout
         self._use_bias = use_bias
         self._kernel_initializer = initializers.get(kernel_initializer)
@@ -259,18 +260,14 @@ class SimpleMHA(Layer):
         self._bias_regularizer = regularizers.get(bias_regularizer)
         self._kernel_constraint = constraints.get(kernel_constraint)
         self._bias_constraint = constraints.get(bias_constraint)
-        if attention_axes is not None and not isinstance(
-            attention_axes, collections.abc.Sized
-        ):
-            self._attention_axes = (attention_axes,)
-        else:
-            self._attention_axes = attention_axes
+        self._attention_axes = None
         self._built_from_signature = False
         self._key_shape, self._value_shape = None, None
 
     def get_config(self):
         config = {
-            "query_shape": list(self._query_shape),
+            "num_heads": self._num_heads,
+            "key_dim": self._key_dim,
             "value_dim": self._value_dim,
             "dropout": self._dropout,
             "use_bias": self._use_bias,
@@ -348,7 +345,7 @@ class SimpleMHA(Layer):
             self._key_dense = einsum_dense.EinsumDense(
                 einsum_equation,
                 output_shape=_get_output_shape(
-                    output_rank - 1, [self._query_shape[-2], self._query_shape[-1]]
+                    output_rank - 1, [self._num_heads, self._key_dim]
                 ),
                 bias_axes=bias_axes if self._use_bias else None,
                 name="key",
@@ -360,7 +357,7 @@ class SimpleMHA(Layer):
             self._value_dense = einsum_dense.EinsumDense(
                 einsum_equation,
                 output_shape=_get_output_shape(
-                    output_rank - 1, [self._query_shape[-2], self._value_dim]
+                    output_rank - 1, [self._num_heads, self._value_dim]
                 ),
                 bias_axes=bias_axes if self._use_bias else None,
                 name="value",
@@ -430,11 +427,6 @@ class SimpleMHA(Layer):
           attention_output: Multi-headed outputs of attention computation.
           attention_scores: Multi-headed attention weights.
         """
-        # Note: Applying scalar multiply at the smaller end of einsum improves
-        # XLA performance, but may introduce slight numeric differences in
-        # the Transformer attention head.
-        query = math_ops.multiply(query, 1.0 / math.sqrt(float(self._query_shape[-1])))
-
         # Take the dot product between "query" and "key" to get the raw
         # attention scores.
         attention_scores = special_math_ops.einsum(
@@ -473,8 +465,13 @@ class SimpleMHA(Layer):
         #   N = `num_attention_heads`
         #   H = `size_per_head`
         # `query` = [B, T, N ,H]
-        query = self._query[tf.newaxis, ...]
-        query = tf.repeat(query, tf.shape(value)[0:1], axis=0)
+        bs_shape = tf.shape(value)[0:1]
+        expanded_shape = tf.constant(
+            [1] * (1 + len(self._attention_axes)), dtype=tf.int32
+        )
+        expanded_shape = tf.concat([expanded_shape, tf.shape(self._query)], axis=0)
+        query = tf.reshape(self._query, expanded_shape)
+        query = tf.repeat(query, bs_shape, axis=0)
 
         # `key` = [B, S, N, H]
         key = self._key_dense(key)

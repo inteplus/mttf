@@ -283,6 +283,8 @@ def MobileNetV3Mixer(
                 "Mixer type MHA requires channels_last image data format."
             )
 
+        from ..keras_layers import SimpleMHA
+
         n_heads = mha_params.n_heads
         input_dim = x.shape[-1]
         if mha_params.key_dim is None:
@@ -295,18 +297,10 @@ def MobileNetV3Mixer(
             key_dim = input_dim // n_heads
         else:
             key_dim = mha_params.key_dim
-        fake_input = tf.eye(1, num_columns=input_dim)[
-            tf.newaxis, tf.newaxis, ...
-        ]  # (B=1, H=1, W=1, D=input_dim)
-        fake_input = tf.repeat(fake_input, tf.shape(x)[0:1], axis=0)
-        layer = kl.MultiHeadAttention(
-            n_heads,
-            key_dim,
-            value_dim=mha_params.value_dim,
-            output_shape=mha_params.output_shape,
-            attention_axes=(1, 2),
+        layer = SimpleMHA(
+            num_heads=n_heads, key_dim=key_dim, value_dim=mha_params.value_dim
         )
-        x = layer(fake_input, x)
+        x = layer(x)
     else:
         raise tfc.ModelSyntaxError("Unknown mixer type: '{}'.".format(mixer_type))
 

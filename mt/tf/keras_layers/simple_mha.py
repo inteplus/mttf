@@ -323,7 +323,8 @@ class MHAPool2D(tf.keras.layers.Layer):
         )
 
         self.layer_softmax = tf.keras.layers.Softmax(axis=3)
-        self.layer_dropout = tf.keras.layers.Dropout(rate=self._dropout)
+        if self._dropout > 0:
+            self.layer_dropout = tf.keras.layers.Dropout(rate=self._dropout)
 
     def call(self, blob, training=None, return_attention_scores: bool = False):
         """The call function.
@@ -389,10 +390,13 @@ class MHAPool2D(tf.keras.layers.Layer):
 
         # `attention_scores` = [B, H2, W2, H*W, N]
         attention_scores = self.layer_softmax(prod)
-        dropout = self.layer_dropout(attention_scores, training=training)
+        if self._dropout > 0:
+            dropout = self.layer_dropout(attention_scores, training=training)
+        else:
+            dropout = attention_scores
 
         # `attention_output` = [B, H2, W2, N, V]
-        attention_output = tf.einsum("bhwin,binv->bhwnv", attention_scores, value)
+        attention_output = tf.einsum("bhwin,binv->bhwnv", dropout, value)
 
         # `output`
         output_shape = tf.concat(

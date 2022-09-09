@@ -339,6 +339,7 @@ def MobileNetV3Mixer(
                 key_dim,
                 value_dim=value_dim,
                 pooling=mhapool_params.pooling,
+                dropout=mhapool_params.dropout,
             )
             x = layer(x)
     else:

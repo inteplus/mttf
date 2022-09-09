@@ -102,6 +102,8 @@ class MHAPool2DCascadeParams(ModelParams):
         expansion factor at each layer
     pooling : {'avg', 'max'}
         pooling type
+    dropout : float
+        dropout probability
     gen : int
         model generation/family number, starting from 1
     """
@@ -113,6 +115,7 @@ class MHAPool2DCascadeParams(ModelParams):
         n_heads: int = 20,
         expansion_factor: float = 1.5,
         pooling: str = "max",
+        dropout: float = 0.2,
         gen: int = 1,
     ):
         super().__init__(gen=gen)
@@ -127,6 +130,7 @@ class MHAPool2DCascadeParams(ModelParams):
             "n_heads": self.n_heads,
             "expansion_factor": self.expansion_factor,
             "pooling": self.pooling,
+            "dropout": self.dropout,
             "gen": self.gen,
         }
 
@@ -137,6 +141,7 @@ class MHAPool2DCascadeParams(ModelParams):
             n_heads=json_obj["n_heads"],
             expansion_factor=json_obj["expansion_factor"],
             pooling=json_obj["pooling"],
+            dropout=json_obj["dropout"],
             gen=json_obj["gen"],
         )
 

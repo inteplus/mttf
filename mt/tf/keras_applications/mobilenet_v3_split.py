@@ -284,7 +284,6 @@ def MobileNetV3Mixer(
             )
 
         from ..keras_layers import SimpleMHA2D
-        import tensorflow as tf
 
         n_heads = mha_params.n_heads
         input_dim = x.shape[-1]
@@ -301,7 +300,7 @@ def MobileNetV3Mixer(
         value_dim = key_dim if mha_params.value_dim is None else mha_params.value_dim
         layer = SimpleMHA2D(num_heads=n_heads, key_dim=key_dim, value_dim=value_dim)
         x = layer(x)
-        x = tf.reshape(x, [-1, 1, 1, n_heads * value_dim])
+        x = layers.Reshape((1, 1, n_heads * value_dim))(x)
     else:
         raise tfc.ModelSyntaxError("Unknown mixer type: '{}'.".format(mixer_type))
 

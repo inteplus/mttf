@@ -19,9 +19,10 @@ import typing as tp
 import numpy as np
 import tensorflow as tf
 from mt import tfc
+from tensorflow.python.util.tf_export import keras_export
 
 
-@tf.python.util.tf_export.keras_export("keras.layers.SimpleMHA2D")
+@keras_export("keras.layers.SimpleMHA2D")
 class SimpleMHA2D(tf.keras.layers.Layer):
     """SimpleMHA2D layer.
 
@@ -190,7 +191,7 @@ class SimpleMHA2D(tf.keras.layers.Layer):
         return dict(list(base_config.items()) + list(config.items()))
 
 
-@tf.python.util.tf_export.keras_export("keras.layers.MHAPool2D")
+@keras_export("keras.layers.MHAPool2D")
 class MHAPool2D(tf.keras.layers.Layer):
     """Pooling in 2D using Keras-based self-attention.
 

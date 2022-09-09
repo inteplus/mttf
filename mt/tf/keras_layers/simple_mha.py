@@ -16,7 +16,7 @@
 # pylint: disable=g-classes-have-attributes
 
 import typing as tp
-import numpy as np
+import math
 import tensorflow as tf
 from mt import tfc
 from tensorflow.python.util.tf_export import keras_export
@@ -323,7 +323,7 @@ class MHAPool2D(tf.keras.layers.Layer):
         )
 
         self.layer_softmax = tf.keras.layers.Softmax(axis=3)
-        self.layer_dropout = tf.keras.layers.Dropout(dropout=self._dropout)
+        self.layer_dropout = tf.keras.layers.Dropout(rate=self._dropout)
 
     def call(self, blob, training=None, return_attention_scores: bool = False):
         """The call function.
@@ -389,7 +389,7 @@ class MHAPool2D(tf.keras.layers.Layer):
 
         # `attention_scores` = [B, H2, W2, H*W, N]
         attention_scores = self.layer_softmax(prod)
-        dropout = tf.layer_dropout(attention_scores, training=training)
+        dropout = self.layer_dropout(attention_scores, training=training)
 
         # `attention_output` = [B, H2, W2, N, V]
         attention_output = tf.einsum("bhwin,binv->bhwnv", attention_scores, value)

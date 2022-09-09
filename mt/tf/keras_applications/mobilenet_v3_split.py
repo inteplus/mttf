@@ -230,18 +230,17 @@ def MobileNetV3LargeBlock(
 
 def MobileNetV3Mixer(
     input_tensor,
+    params: tfc.MobileNetV3MixerParams,
     last_point_ch,
     alpha=1.0,
     model_type: str = "Large",  # only 'Small' or 'Large' are accepted
     minimalistic=False,
-    mixer_type: str = "mobilenet",
-    mha_params: tp.Optional[tfc.MHAParams] = None,
 ):
     """Prepares a MobileNetV3 mixer block."""
 
     x = input_tensor
 
-    if mixer_type == "mobilenet":
+    if params.variant == "mobilenet":
         channel_axis = 1 if backend.image_data_format() == "channels_first" else -1
 
         if minimalistic:
@@ -275,19 +274,25 @@ def MobileNetV3Mixer(
             last_point_ch, kernel_size=1, padding="same", use_bias=True, name="Conv_2"
         )(x)
         x = activation(x)
-    elif mixer_type == "maxpool":
+    elif params.variant == "maxpool":
         x = layers.GlobalMaxPool2D(x)
-    elif mixer_type == "mha":
+    elif params.variant == "mha":
         if backend.image_data_format() == "channels_first":
             raise tfc.ModelSyntaxError(
-                "Mixer type MHA requires channels_last image data format."
+                "Mixer variant 'mha' requires channels_last image data format."
+            )
+
+        if not isinstance(params.mha_params, tfc.MHAParams):
+            raise tfc.ModelSyntaxError(
+                "Parameter 'params.mha_params' is not of type "
+                "mt.tfc.MHAParams. Got: {}.".format(type(params.mha_params))
             )
 
         from ..keras_layers import SimpleMHA2D
 
-        n_heads = mha_params.n_heads
+        n_heads = params.mha_params.n_heads
         input_dim = x.shape[-1]
-        if mha_params.key_dim is None:
+        if params.mha_params.key_dim is None:
             if input_dim % n_heads != 0:
                 raise tfc.ModelSyntaxError(
                     "The last dimension ({}) is not divisible by {}.".format(
@@ -296,16 +301,53 @@ def MobileNetV3Mixer(
                 )
             key_dim = input_dim // n_heads
         else:
-            key_dim = mha_params.key_dim
-        value_dim = key_dim if mha_params.value_dim is None else mha_params.value_dim
+            key_dim = params.mha_params.key_dim
+        value_dim = (
+            key_dim
+            if params.mha_params.value_dim is None
+            else params.mha_params.value_dim
+        )
         layer = SimpleMHA2D(num_heads=n_heads, key_dim=key_dim, value_dim=value_dim)
         x = layer(x)
         x = layers.Reshape((1, 1, n_heads * value_dim))(x)
+    elif params.variant == "mhapool":
+        if backend.image_data_format() == "channels_first":
+            raise tfc.ModelSyntaxError(
+                "Mixer variant 'mhapool' requires channels_last image data format."
+            )
+
+        mhapool_params = params.mhapool_cascade_params
+        if not isinstance(mhapool_params, tfc.MHAPool2DCascadeParams):
+            raise tfc.ModelSyntaxError(
+                "Parameter 'params.mhapool_cascade_params' is not of type "
+                "mt.tfc.MHAPool2DCascadeParams. Got: {}.".format(type(mhapool_params))
+            )
+
+        from ..keras_layers import MHAPool2D
+
+        n_heads = mhapool_params.n_heads
+        while True:
+            h = x.shape[1]
+            w = x.shape[2]
+            if h == 1 and w == 1:
+                break
+            c = x.shape[3]
+            key_dim = (c + n_heads - 1) // n_heads
+            value_dim = int(key_dim * mhapool_params.expansion_factor)
+            layer = MHAPool2D(
+                n_heads,
+                key_dim,
+                value_dim=value_dim,
+                pooling=mhapool_params.pooling,
+            )
+            x = layer(x)
     else:
-        raise tfc.ModelSyntaxError("Unknown mixer type: '{}'.".format(mixer_type))
+        raise tfc.ModelSyntaxError(
+            "Unknown mixer variant: '{}'.".format(params.variant)
+        )
 
     # Create model.
-    model = models.Model(input_tensor, x, name="MobilenetV3{}Mixer".format(model_type))
+    model = models.Model(input_tensor, x, name="MobileNetV3{}Mixer".format(model_type))
 
     return model
 
@@ -337,7 +379,7 @@ def MobileNetV3Output(
             return None
 
     # Create model.
-    model = models.Model(input_tensor, x, name="MobilenetV3{}Output".format(model_type))
+    model = models.Model(input_tensor, x, name="MobileNetV3{}Output".format(model_type))
 
     return model
 
@@ -347,8 +389,7 @@ def MobileNetV3Split(
     alpha: float = 1.0,
     model_type: str = "Large",
     minimalistic: bool = False,
-    mixer_type: tp.Optional[str] = "mobilenet",
-    mha_params: tp.Optional[tfc.MHAParams] = None,
+    mixer_params: tp.Optional[tfc.MobileNetV3MixerParams] = None,
     include_top: bool = True,
     pooling=None,
     classes: int = 1000,
@@ -386,34 +427,28 @@ def MobileNetV3Split(
         however, they do not utilize any of the advanced blocks (squeeze-and-excite units,
         hard-swish, and 5x5 convolutions). While these models are less efficient on CPU, they
         are much more performant on GPU/DSP.
-    mixer_type : {'mobilenet', 'maxpool', 'mha', None}
-        Type of the mixer block, if used at all. If None is specified, no mixer block is used.
-        Otherwise the output has 1x1 spatial resolution. If 'mobilenet' is specified, the mixer
-        follows 'mobilenet' style, includnig mainly 2 Conv layers and one GlobalAveragePooling2D
-        layer. If 'maxpool' is specified, grid processing is just a GlobalMaxPool2D layer. If
-        'mha' is specified, a MultiHeadAttention layer is used.
-    mha_params : mt.tfc.MHAParams
-        The parameters defining the MultiHeadAttention layer. Only valid for 'mha' mixer type.
+    mixer_params : mt.tfc.MobileNetV3MixerParams, optional
+        parameters for defining the mixer block
     include_top : bool, default True
         whether to include the fully-connected layer at the top of the network. Only valid if
-        `mixer_type` is not null.
+        `mixer_params` is not null.
     pooling : str, optional
         Optional pooling mode for feature extraction when `include_top` is False and
-        `mixer_type` is not null.
+        `mixer_params` is not null.
         - `None` means that the output of the model will be the 4D tensor output of the last
           convolutional block.
         - `avg` means that global average pooling will be applied to the output of the last
           convolutional block, and thus the output of the model will be a 2D tensor.
         - `max` means that global max pooling will be applied.
     classes : int, optional
-        Optional number of classes to classify images into, only to be specified if `mixer_type`
+        Optional number of classes to classify images into, only to be specified if `mixer_params`
         is not null and `include_top` is True.
     dropout_rate : float
         fraction of the input units to drop on the last layer. Only to be specified if
-        `mixer_type` is not null and `include_top` is True.
+        `mixer_params` is not null and `include_top` is True.
     classifier_activation : object
         A `str` or callable. The activation function to use on the "top" layer. Ignored unless
-        `mixer_type` is not null and `include_top` is True. Set `classifier_activation=None` to
+        `mixer_params` is not null and `include_top` is True. Set `classifier_activation=None` to
         return the logits of the "top" layer. When loading pretrained weights,
         `classifier_activation` can only be `None` or `"softmax"`.
     output_all : bool
@@ -458,19 +493,24 @@ def MobileNetV3Split(
         else:
             outputs = [x]
 
-    if isinstance(mixer_type, str):
+    if mixer_params is not None:
+        if not isinstance(mixer_params, tfc.MobileNetV3MixerParams):
+            raise tfc.ModelSyntaxError(
+                "Argument 'mixer_params' is not an instance of "
+                "mt.tfc.MobileNetV3MixerParams. Got: {}.".format(type(mixer_params))
+            )
+
         if model_type == "Large":
             last_point_ch = 1280
         else:
             last_point_ch = 1024
         mixer_block = MobileNetV3Mixer(
             x,
+            mixer_params,
             last_point_ch,
             alpha=alpha,
             model_type=model_type,
             minimalistic=minimalistic,
-            mixer_type=mixer_type,
-            mha_params=mha_params,
         )
         x = mixer_block(x)
         if output_all:
@@ -493,8 +533,6 @@ def MobileNetV3Split(
                 outputs.append(x)
             else:
                 outputs = [x]
-    elif mixer_type is not None:
-        raise tfc.ModelSyntaxError("Unknown mixer type: {}.".format(mixer_type))
 
     # Create model.
     if name is None:

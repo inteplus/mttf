@@ -258,7 +258,7 @@ class MHAPool2D(tf.keras.layers.Layer):
         pooling: str = "max",
         pool_size=(2, 2),
         use_bias: bool = True,
-        activation="relu",
+        activation="swish",
         kernel_initializer="glorot_uniform",
         bias_initializer="zeros",
         kernel_regularizer=None,
@@ -273,7 +273,7 @@ class MHAPool2D(tf.keras.layers.Layer):
         self._pooling = pooling
         self._pool_size = pool_size
         self._use_bias = use_bias
-        self._activation = activation
+        self._activation = tf.keras.activations.get(activation)
         self._kernel_initializer = tf.keras.initializers.get(kernel_initializer)
         self._bias_initializer = tf.keras.initializers.get(bias_initializer)
         self._kernel_regularizer = tf.keras.regularizers.get(kernel_regularizer)
@@ -416,7 +416,7 @@ class MHAPool2D(tf.keras.layers.Layer):
             "pooling": self._pooling,
             "pool_size": self._pool_size,
             "use_bias": self._use_bias,
-            "activation": self._activation,
+            "activation": tf.keras.activations.serialize(self._activation),
             "kernel_initializer": tf.keras.initializers.serialize(
                 self._kernel_initializer
             ),

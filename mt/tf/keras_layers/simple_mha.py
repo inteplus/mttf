@@ -88,7 +88,7 @@ class SimpleMHA2D(tf.keras.layers.Layer):
         self._key_dim = key_dim
         self._value_dim = value_dim if value_dim else key_dim
         self._use_bias = use_bias
-        self._activation = activation
+        self._activation = tf.keras.activations.get(activation)
         self._kernel_initializer = tf.keras.initializers.get(kernel_initializer)
         self._bias_initializer = tf.keras.initializers.get(bias_initializer)
         self._kernel_regularizer = tf.keras.regularizers.get(kernel_regularizer)

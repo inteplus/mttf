@@ -239,9 +239,9 @@ def MobileNetV3Mixer(
     """Prepares a MobileNetV3 mixer block."""
 
     x = input_tensor
+    channel_axis = 1 if backend.image_data_format() == "channels_first" else -1
 
     if params.variant == "mobilenet":
-        channel_axis = 1 if backend.image_data_format() == "channels_first" else -1
 
         if minimalistic:
             kernel = 3
@@ -361,6 +361,12 @@ def MobileNetV3Mixer(
                     dropout=mhapool_params.dropout,
                 )
                 x = layer(x)
+                if activation == mhapool_params.activation:
+                    x = layers.BatchNormalization(
+                        axis=channel_axis,
+                        epsilon=1e-3,
+                        momentum=0.999,
+                    )(x)
     else:
         raise tfc.ModelSyntaxError(
             "Unknown mixer variant: '{}'.".format(params.variant)

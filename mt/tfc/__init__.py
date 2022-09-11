@@ -134,7 +134,7 @@ class MHAPool2DCascadeParams(ModelParams):
         dropout: float = 0.2,
         max_num_pooling_layers: int = 10,
         activation: str = "swish",
-        final_activation: tp.Optional[str] = "tanh",
+        final_activation: tp.Optional[str] = "swish",
         gen: int = 1,
     ):
         super().__init__(gen=gen)

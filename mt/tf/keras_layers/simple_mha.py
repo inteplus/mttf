@@ -59,6 +59,8 @@ class SimpleMHA2D(tf.keras.layers.Layer):
         Regularizer for convolutional layer kernels.
     bias_regularizer : object
         Regularizer for convolutional layer biases.
+    dropout: float
+        dropout probability
 
     Examples
     --------
@@ -81,6 +83,7 @@ class SimpleMHA2D(tf.keras.layers.Layer):
         bias_initializer="zeros",
         kernel_regularizer=None,
         bias_regularizer=None,
+        dropout: float = 0.2,
         **kwargs
     ):
         super(SimpleMHA2D, self).__init__(**kwargs)
@@ -93,15 +96,16 @@ class SimpleMHA2D(tf.keras.layers.Layer):
         self._bias_initializer = tf.keras.initializers.get(bias_initializer)
         self._kernel_regularizer = tf.keras.regularizers.get(kernel_regularizer)
         self._bias_regularizer = tf.keras.regularizers.get(bias_regularizer)
+        self._dropout = dropout
 
-        self._query = self.add_weight(
+        self.tensor_query = self.add_weight(
             name="query",
             shape=[1, 1, num_heads, key_dim],
             initializer="random_normal",
             trainable=True,
         )
 
-        self._key_proj = tf.keras.layers.Conv2D(
+        self.layer_key_proj = tf.keras.layers.Conv2D(
             self._num_heads * self._key_dim,  # filters
             1,  # kernel_size
             use_bias=self._use_bias,
@@ -111,7 +115,7 @@ class SimpleMHA2D(tf.keras.layers.Layer):
             bias_regularizer=self._bias_regularizer,
         )
 
-        self._value_proj = tf.keras.layers.Conv2D(
+        self.layer_value_proj = tf.keras.layers.Conv2D(
             self._num_heads * self._value_dim,  # filters
             1,  # kernel_size
             use_bias=self._use_bias,
@@ -122,7 +126,9 @@ class SimpleMHA2D(tf.keras.layers.Layer):
             bias_regularizer=self._bias_regularizer,
         )
 
-        self._softmax = tf.keras.layers.Softmax(axis=1)
+        self.layer_softmax = tf.keras.layers.Softmax(axis=1)
+        if self._dropout > 0:
+            self.layer_dropout = tf.keras.layers.Dropout(rate=self._dropout)
 
     def call(self, key_value, training=None):
         """The call function.
@@ -152,24 +158,26 @@ class SimpleMHA2D(tf.keras.layers.Layer):
         # `query` = [1, 1, N ,K]
 
         # `key` = [B, H*W, N, K]
-        key = self._key_proj(key_value, training=training)
+        key = self.layer_key_proj(key_value, training=training)
         key_shape = tf.concat(
             [bs_shape, hw_shape, [self._num_heads, self._key_dim]], axis=0
         )
         key = tf.reshape(key, key_shape)
 
         # `value` = [B, H*W, N, V]
-        value = self._value_proj(key_value, training=training)
+        value = self.layer_value_proj(key_value, training=training)
         value_shape = tf.concat(
             [bs_shape, hw_shape, [self._num_heads, self._value_dim]], axis=0
         )
         value = tf.reshape(value, value_shape)
 
         # `dot_prod` = [B, H*W, N]
-        dot_prod = tf.reduce_sum(self._query * key, axis=-1)
+        dot_prod = tf.reduce_sum(self.tensor_query * key, axis=-1)
 
         # `softmax` = [B, H*W, N, 1]
-        softmax = self._softmax(dot_prod)
+        softmax = self.layer_softmax(dot_prod)
+        if self._dropout > 0:
+            softmax = self.layer_dropout(softmax, training=training)
         softmax = tf.expand_dims(softmax, axis=-1)
 
         # `attention_output` = [B, N, V]
@@ -192,6 +200,7 @@ class SimpleMHA2D(tf.keras.layers.Layer):
                 self._kernel_regularizer
             ),
             "bias_regularizer": tf.keras.regularizers.serialize(self._bias_regularizer),
+            "dropout": self._dropout,
         }
         base_config = super(SimpleMHA2D, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
@@ -269,7 +278,7 @@ class MHAPool2D(tf.keras.layers.Layer):
         bias_initializer="zeros",
         kernel_regularizer=None,
         bias_regularizer=None,
-        dropout: float = 0.0,
+        dropout: float = 0.2,
         **kwargs
     ):
         super(MHAPool2D, self).__init__(**kwargs)

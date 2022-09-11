@@ -49,6 +49,8 @@ class SimpleMHA2D(tf.keras.layers.Layer):
         Size of each attention head for value.
     use_bias : bool
         Whether the convolutional layers use bias vectors/matrices.
+    activation : object
+        activation for the `value` convolution
     kernel_initializer : object
         Initializer for convolutional layer kernels.
     bias_initializer : object
@@ -74,6 +76,7 @@ class SimpleMHA2D(tf.keras.layers.Layer):
         key_dim: int,
         value_dim: tp.Optional[int] = None,
         use_bias=True,
+        activation="tanh",
         kernel_initializer="glorot_uniform",
         bias_initializer="zeros",
         kernel_regularizer=None,
@@ -85,6 +88,7 @@ class SimpleMHA2D(tf.keras.layers.Layer):
         self._key_dim = key_dim
         self._value_dim = value_dim if value_dim else key_dim
         self._use_bias = use_bias
+        self._activation = activation
         self._kernel_initializer = tf.keras.initializers.get(kernel_initializer)
         self._bias_initializer = tf.keras.initializers.get(bias_initializer)
         self._kernel_regularizer = tf.keras.regularizers.get(kernel_regularizer)
@@ -111,6 +115,7 @@ class SimpleMHA2D(tf.keras.layers.Layer):
             self._num_heads * self._value_dim,  # filters
             1,  # kernel_size
             use_bias=self._use_bias,
+            activation=self._activation,
             kernel_initializer=self._kernel_initializer,
             bias_initializer=self._bias_initializer,
             kernel_regularizer=self._kernel_regularizer,
@@ -178,6 +183,7 @@ class SimpleMHA2D(tf.keras.layers.Layer):
             "key_dim": self._key_dim,
             "value_dim": self._value_dim,
             "use_bias": self._use_bias,
+            "activation": tf.keras.activations.serialize(self._activation),
             "kernel_initializer": tf.keras.initializers.serialize(
                 self._kernel_initializer
             ),

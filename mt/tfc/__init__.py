@@ -94,6 +94,15 @@ class MHAParams(ModelParams):
 class MHAPool2DCascadeParams(ModelParams):
     """Parameters for creating a cascade of MHAPool2D layers.
 
+    The architecture is a cascade of K MHAPool2D layers followed by optionally a SimpleMHA2D layer.
+    For a given number M which is the maximum number of MHAPool2D layers, the design is to cascade
+    K <= M MHAPool2D layers such that either the grid resolution is 1x1 or K == M. If the grid
+    resolution is not 1x1 at the K-th layer, then a SimpleMHA2D layer is cascaded to finish the
+    job.
+
+    All layer activations in the grid follow the same type, except for the last layer which can be
+    modified.
+
     Parameters
     ----------
     n_heads : int
@@ -104,6 +113,13 @@ class MHAPool2DCascadeParams(ModelParams):
         pooling type
     dropout : float
         dropout probability
+    max_num_pooling_layers : int
+        maximum number of pooling layers before a SimpleMHA2D layer to finish the job, if the grid
+        resolution has not reached 1x1
+    activation: str
+        activation type for all pooling layers but maybe the last one
+    final_activation : str
+        activation type for the last layer, which can be MHAPool2D or SimpleMHA2D
     gen : int
         model generation/family number, starting from 1
     """
@@ -116,6 +132,9 @@ class MHAPool2DCascadeParams(ModelParams):
         expansion_factor: float = 1.5,
         pooling: str = "max",
         dropout: float = 0.2,
+        max_num_pooling_layers: int = 10,
+        activation: str = "swish",
+        final_activation: tp.Optional[str] = "tanh",
         gen: int = 1,
     ):
         super().__init__(gen=gen)
@@ -123,6 +142,12 @@ class MHAPool2DCascadeParams(ModelParams):
         self.n_heads = n_heads
         self.expansion_factor = expansion_factor
         self.pooling = pooling
+        self.dropout = dropout
+        self.max_num_pooling_layers = max_num_pooling_layers
+        self.activation = activation
+        self.final_activation = (
+            activation if final_activation is None else final_activation
+        )
 
     def to_json(self):
         """Returns an equivalent json object."""
@@ -131,6 +156,9 @@ class MHAPool2DCascadeParams(ModelParams):
             "expansion_factor": self.expansion_factor,
             "pooling": self.pooling,
             "dropout": self.dropout,
+            "max_num_pooling_layers": self.max_num_pooling_layers,
+            "activation": self.activation,
+            "final_activation": self.final_activation,
             "gen": self.gen,
         }
 
@@ -142,6 +170,9 @@ class MHAPool2DCascadeParams(ModelParams):
             expansion_factor=json_obj["expansion_factor"],
             pooling=json_obj["pooling"],
             dropout=json_obj["dropout"],
+            max_num_pooling_layers=json_obj["max_num_pooling_layers"],
+            activation=json_obj["activation"],
+            final_activation=json_obj["final_activation"],
             gen=json_obj["gen"],
         )
 

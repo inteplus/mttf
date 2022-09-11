@@ -323,25 +323,43 @@ def MobileNetV3Mixer(
                 "mt.tfc.MHAPool2DCascadeParams. Got: {}.".format(type(mhapool_params))
             )
 
-        from ..keras_layers import MHAPool2D
+        from ..keras_layers import MHAPool2D, SimpleMHA2D
 
         n_heads = mhapool_params.n_heads
+        k = 0
         while True:
             h = x.shape[1]
             w = x.shape[2]
-            if h == 1 and w == 1:
+
+            if h <= 1 and w <= 1:
                 break
+
             c = x.shape[3]
             key_dim = (c + n_heads - 1) // n_heads
             value_dim = int(key_dim * mhapool_params.expansion_factor)
-            layer = MHAPool2D(
-                n_heads,
-                key_dim,
-                value_dim=value_dim,
-                pooling=mhapool_params.pooling,
-                dropout=mhapool_params.dropout,
-            )
-            x = layer(x)
+            k += 1
+            if k > mhapool_params.max_num_pooling_layers:  # SimpleMHA2D
+                layer = SimpleMHA2D(
+                    n_heads,
+                    key_dim,
+                    value_dim=value_dim,
+                    activation=mhapool_params.final_activation,
+                )
+                x = layer(x)
+                x = layers.Reshape((1, 1, n_heads * value_dim))(x)
+            else:  # MHAPool2D
+                if h <= 2 and w <= 2:
+                    activation = mhapool_params.final_activation
+                else:
+                    activation = mhapool_params.activation
+                layer = MHAPool2D(
+                    n_heads,
+                    key_dim,
+                    value_dim=value_dim,
+                    pooling=mhapool_params.pooling,
+                    dropout=mhapool_params.dropout,
+                )
+                x = layer(x)
     else:
         raise tfc.ModelSyntaxError(
             "Unknown mixer variant: '{}'.".format(params.variant)

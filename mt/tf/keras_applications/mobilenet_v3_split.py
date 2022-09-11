@@ -344,6 +344,7 @@ def MobileNetV3Mixer(
                     key_dim,
                     value_dim=value_dim,
                     activation=mhapool_params.final_activation,
+                    dropout=mhapool_params.dropout,
                 )
                 x = layer(x)
                 x = layers.Reshape((1, 1, n_heads * value_dim))(x)

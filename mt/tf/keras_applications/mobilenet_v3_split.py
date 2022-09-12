@@ -339,15 +339,18 @@ def MobileNetV3Mixer(
             value_dim = int(key_dim * mhapool_params.expansion_factor)
             k += 1
             if k > mhapool_params.max_num_pooling_layers:  # SimpleMHA2D
-                layer = SimpleMHA2D(
-                    n_heads,
-                    key_dim,
-                    value_dim=value_dim,
-                    activation=mhapool_params.final_activation,
-                    dropout=mhapool_params.dropout,
-                )
-                x = layer(x)
-                x = layers.Reshape((1, 1, n_heads * value_dim))(x)
+                if True:
+                    x = layers.GlobalMaxPooling2D(keepdims=True)(x)
+                else:
+                    layer = SimpleMHA2D(
+                        n_heads,
+                        key_dim,
+                        value_dim=value_dim,
+                        activation=mhapool_params.final_activation,
+                        dropout=mhapool_params.dropout,
+                    )
+                    x = layer(x)
+                    x = layers.Reshape((1, 1, n_heads * value_dim))(x)
             else:  # MHAPool2D
                 if h <= 2 and w <= 2:
                     activation = mhapool_params.final_activation

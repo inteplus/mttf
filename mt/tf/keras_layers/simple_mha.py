@@ -59,6 +59,10 @@ class SimpleMHA2D(tf.keras.layers.Layer):
         Regularizer for convolutional layer kernels.
     bias_regularizer : object
         Regularizer for convolutional layer biases.
+    kernel_constraint: object
+        Contraint function applied to the layer kernels.
+    bias_constraint: object
+        Contraint function applied to the layer biases.
     dropout: float
         dropout probability
 
@@ -83,6 +87,8 @@ class SimpleMHA2D(tf.keras.layers.Layer):
         bias_initializer="zeros",
         kernel_regularizer=None,
         bias_regularizer=None,
+        kernel_contraint=None,
+        bias_constraint=None,
         dropout: float = 0.2,
         **kwargs
     ):
@@ -96,6 +102,8 @@ class SimpleMHA2D(tf.keras.layers.Layer):
         self._bias_initializer = tf.keras.initializers.get(bias_initializer)
         self._kernel_regularizer = tf.keras.regularizers.get(kernel_regularizer)
         self._bias_regularizer = tf.keras.regularizers.get(bias_regularizer)
+        self._kernel_constraint = tf.keras.constraints.get(kernel_constraint)
+        self._bias_constraint = tf.keras.constraints.get(bias_constraint)
         self._dropout = dropout
 
         self.tensor_query = self.add_weight(
@@ -113,6 +121,8 @@ class SimpleMHA2D(tf.keras.layers.Layer):
             bias_initializer=self._bias_initializer,
             kernel_regularizer=self._kernel_regularizer,
             bias_regularizer=self._bias_regularizer,
+            kernel_contraint=self._kernel_constraint,
+            bias_constraint=self._bias_constraint,
         )
 
         self.layer_value_proj = tf.keras.layers.Conv2D(
@@ -124,6 +134,8 @@ class SimpleMHA2D(tf.keras.layers.Layer):
             bias_initializer=self._bias_initializer,
             kernel_regularizer=self._kernel_regularizer,
             bias_regularizer=self._bias_regularizer,
+            kernel_contraint=self._kernel_constraint,
+            bias_constraint=self._bias_constraint,
         )
 
         self.layer_softmax = tf.keras.layers.Softmax(axis=1)
@@ -200,6 +212,10 @@ class SimpleMHA2D(tf.keras.layers.Layer):
                 self._kernel_regularizer
             ),
             "bias_regularizer": tf.keras.regularizers.serialize(self._bias_regularizer),
+            "kernel_constraint": tf.keras.constraints.serialize(
+                self._kernel_constraint
+            ),
+            "bias_constraint": tf.keras.constraints.serialize(self._bias_constraint),
             "dropout": self._dropout,
         }
         base_config = super(SimpleMHA2D, self).get_config()
@@ -252,6 +268,10 @@ class MHAPool2D(tf.keras.layers.Layer):
         Regularizer for the convolutional layer kernels.
     bias_regularizer : object
         Regularizer for the convolutional layer biases.
+    kernel_constraint: object
+        Contraint function applied to the layer kernels.
+    bias_constraint: object
+        Contraint function applied to the layer biases.
     dropout: float
         dropout probability
 
@@ -278,6 +298,8 @@ class MHAPool2D(tf.keras.layers.Layer):
         bias_initializer="zeros",
         kernel_regularizer=None,
         bias_regularizer=None,
+        kernel_contraint=None,
+        bias_constraint=None,
         dropout: float = 0.2,
         **kwargs
     ):
@@ -293,6 +315,8 @@ class MHAPool2D(tf.keras.layers.Layer):
         self._bias_initializer = tf.keras.initializers.get(bias_initializer)
         self._kernel_regularizer = tf.keras.regularizers.get(kernel_regularizer)
         self._bias_regularizer = tf.keras.regularizers.get(bias_regularizer)
+        self._kernel_constraint = tf.keras.constraints.get(kernel_constraint)
+        self._bias_constraint = tf.keras.constraints.get(bias_constraint)
         self._dropout = dropout
 
         if self._pooling == "max":
@@ -313,6 +337,8 @@ class MHAPool2D(tf.keras.layers.Layer):
             bias_initializer=self._bias_initializer,
             kernel_regularizer=self._kernel_regularizer,
             bias_regularizer=self._bias_regularizer,
+            kernel_contraint=self._kernel_constraint,
+            bias_constraint=self._bias_constraint,
             name="query_proj",
         )
 
@@ -325,6 +351,8 @@ class MHAPool2D(tf.keras.layers.Layer):
             bias_initializer=self._bias_initializer,
             kernel_regularizer=self._kernel_regularizer,
             bias_regularizer=self._bias_regularizer,
+            kernel_contraint=self._kernel_constraint,
+            bias_constraint=self._bias_constraint,
             name="key_proj",
         )
 
@@ -337,6 +365,8 @@ class MHAPool2D(tf.keras.layers.Layer):
             bias_initializer=self._bias_initializer,
             kernel_regularizer=self._kernel_regularizer,
             bias_regularizer=self._bias_regularizer,
+            kernel_contraint=self._kernel_constraint,
+            bias_constraint=self._bias_constraint,
             name="value_proj",
         )
 
@@ -443,6 +473,10 @@ class MHAPool2D(tf.keras.layers.Layer):
                 self._kernel_regularizer
             ),
             "bias_regularizer": tf.keras.regularizers.serialize(self._bias_regularizer),
+            "kernel_constraint": tf.keras.constraints.serialize(
+                self._kernel_constraint
+            ),
+            "bias_constraint": tf.keras.constraints.serialize(self._bias_constraint),
             "dropout": self._dropout,
         }
         base_config = super(MHAPool2D, self).get_config()

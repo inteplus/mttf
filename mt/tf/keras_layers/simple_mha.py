@@ -313,6 +313,7 @@ class MHAPool2D(tf.keras.layers.Layer):
             bias_initializer=self._bias_initializer,
             kernel_regularizer=self._kernel_regularizer,
             bias_regularizer=self._bias_regularizer,
+            name="query_proj",
         )
 
         self.layer_key_proj = tf.keras.layers.Conv2D(
@@ -324,6 +325,7 @@ class MHAPool2D(tf.keras.layers.Layer):
             bias_initializer=self._bias_initializer,
             kernel_regularizer=self._kernel_regularizer,
             bias_regularizer=self._bias_regularizer,
+            name="key_proj",
         )
 
         self.layer_value_proj = tf.keras.layers.Conv2D(
@@ -335,6 +337,7 @@ class MHAPool2D(tf.keras.layers.Layer):
             bias_initializer=self._bias_initializer,
             kernel_regularizer=self._kernel_regularizer,
             bias_regularizer=self._bias_regularizer,
+            name="value_proj",
         )
 
         self.layer_softmax = tf.keras.layers.Softmax(axis=3)

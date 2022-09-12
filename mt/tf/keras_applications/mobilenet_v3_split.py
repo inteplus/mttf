@@ -345,36 +345,29 @@ def MobileNetV3Mixer(
                         keepdims=True, name=block_name + "/GlobalMaxPool"
                     )(x)
                 else:
-                    layer = SimpleMHA2D(
+                    x = layers.LayerNormalization()(x)
+                    x = SimpleMHA2D(
                         n_heads,
                         key_dim,
                         value_dim=value_dim,
                         activation=mhapool_params.final_activation,
                         dropout=mhapool_params.dropout,
-                    )
-                    x = layer(x)
+                    )(x)
                     x = layers.Reshape((1, 1, n_heads * value_dim))(x)
             else:  # MHAPool2D
+                x = layers.LayerNormalization()(x)
                 if h <= 2 and w <= 2:
                     activation = mhapool_params.final_activation
                 else:
                     activation = mhapool_params.activation
-                layer = MHAPool2D(
+                x = MHAPool2D(
                     n_heads,
                     key_dim,
                     value_dim=value_dim,
                     pooling=mhapool_params.pooling,
                     dropout=mhapool_params.dropout,
                     name=block_name + "/MHAPool",
-                )
-                x = layer(x)
-                if activation == mhapool_params.activation:
-                    x = layers.BatchNormalization(
-                        axis=channel_axis,
-                        epsilon=1e-3,
-                        momentum=0.999,
-                        name=block_name + "/BatchNorm",
-                    )(x)
+                )(x)
     else:
         raise tfc.ModelSyntaxError(
             "Unknown mixer variant: '{}'.".format(params.variant)

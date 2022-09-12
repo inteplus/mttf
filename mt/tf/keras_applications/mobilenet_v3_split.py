@@ -338,9 +338,12 @@ def MobileNetV3Mixer(
             key_dim = (c + n_heads - 1) // n_heads
             value_dim = int(key_dim * mhapool_params.expansion_factor)
             k += 1
+            block_name = "MHAPool2DCascade_block{}".format(k)
             if k > mhapool_params.max_num_pooling_layers:  # SimpleMHA2D
                 if True:
-                    x = layers.GlobalMaxPooling2D(keepdims=True)(x)
+                    x = layers.GlobalMaxPooling2D(
+                        keepdims=True, name=block_name + "/GlobalMaxPool"
+                    )(x)
                 else:
                     layer = SimpleMHA2D(
                         n_heads,
@@ -362,6 +365,7 @@ def MobileNetV3Mixer(
                     value_dim=value_dim,
                     pooling=mhapool_params.pooling,
                     dropout=mhapool_params.dropout,
+                    name=block_name + "/MHAPool",
                 )
                 x = layer(x)
                 if activation == mhapool_params.activation:
@@ -369,6 +373,7 @@ def MobileNetV3Mixer(
                         axis=channel_axis,
                         epsilon=1e-3,
                         momentum=0.999,
+                        name=block_name + "/BatchNorm",
                     )(x)
     else:
         raise tfc.ModelSyntaxError(

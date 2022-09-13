@@ -87,7 +87,7 @@ class SimpleMHA2D(tf.keras.layers.Layer):
         bias_initializer="zeros",
         kernel_regularizer=None,
         bias_regularizer=None,
-        kernel_contraint=None,
+        kernel_constraint=None,
         bias_constraint=None,
         dropout: float = 0.2,
         **kwargs
@@ -121,7 +121,7 @@ class SimpleMHA2D(tf.keras.layers.Layer):
             bias_initializer=self._bias_initializer,
             kernel_regularizer=self._kernel_regularizer,
             bias_regularizer=self._bias_regularizer,
-            kernel_contraint=self._kernel_constraint,
+            kernel_constraint=self._kernel_constraint,
             bias_constraint=self._bias_constraint,
         )
 
@@ -134,7 +134,7 @@ class SimpleMHA2D(tf.keras.layers.Layer):
             bias_initializer=self._bias_initializer,
             kernel_regularizer=self._kernel_regularizer,
             bias_regularizer=self._bias_regularizer,
-            kernel_contraint=self._kernel_constraint,
+            kernel_constraint=self._kernel_constraint,
             bias_constraint=self._bias_constraint,
         )
 
@@ -298,7 +298,7 @@ class MHAPool2D(tf.keras.layers.Layer):
         bias_initializer="zeros",
         kernel_regularizer=None,
         bias_regularizer=None,
-        kernel_contraint=None,
+        kernel_constraint=None,
         bias_constraint=None,
         dropout: float = 0.2,
         **kwargs
@@ -337,7 +337,7 @@ class MHAPool2D(tf.keras.layers.Layer):
             bias_initializer=self._bias_initializer,
             kernel_regularizer=self._kernel_regularizer,
             bias_regularizer=self._bias_regularizer,
-            kernel_contraint=self._kernel_constraint,
+            kernel_constraint=self._kernel_constraint,
             bias_constraint=self._bias_constraint,
             name="query_proj",
         )
@@ -351,7 +351,7 @@ class MHAPool2D(tf.keras.layers.Layer):
             bias_initializer=self._bias_initializer,
             kernel_regularizer=self._kernel_regularizer,
             bias_regularizer=self._bias_regularizer,
-            kernel_contraint=self._kernel_constraint,
+            kernel_constraint=self._kernel_constraint,
             bias_constraint=self._bias_constraint,
             name="key_proj",
         )
@@ -365,7 +365,7 @@ class MHAPool2D(tf.keras.layers.Layer):
             bias_initializer=self._bias_initializer,
             kernel_regularizer=self._kernel_regularizer,
             bias_regularizer=self._bias_regularizer,
-            kernel_contraint=self._kernel_constraint,
+            kernel_constraint=self._kernel_constraint,
             bias_constraint=self._bias_constraint,
             name="value_proj",
         )

@@ -234,7 +234,7 @@ class MobileNetV3MixerParams(ModelParams):
         mhapool_params = json_obj.get("mhapool_cascade_params", None)
         if mhapool_params is not None:
             mhapool_params = MHAPool2DCascadeParams.from_json(mhapool_params)
-        return MHAParams(
+        return MobileNetV3MixerParams(
             variant=json_obj["variant"],
             mha_params=mha_params,
             mhapool_cascade_params=mhapool_params,

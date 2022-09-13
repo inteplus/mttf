@@ -165,7 +165,7 @@ class MHAPool2DCascadeParams(ModelParams):
     @classmethod
     def from_json(cls, json_obj):
         """Instantiates from a json object."""
-        return MHAParams(
+        return MHAPool2DCascadeParams(
             n_heads=json_obj["n_heads"],
             expansion_factor=json_obj["expansion_factor"],
             pooling=json_obj["pooling"],

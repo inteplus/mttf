@@ -276,40 +276,6 @@ def MobileNetV3Mixer(
         x = activation(x)
     elif params.variant == "maxpool":
         x = layers.GlobalMaxPool2D(x)
-    elif params.variant == "mha":
-        if backend.image_data_format() == "channels_first":
-            raise tfc.ModelSyntaxError(
-                "Mixer variant 'mha' requires channels_last image data format."
-            )
-
-        if not isinstance(params.mha_params, tfc.MHAParams):
-            raise tfc.ModelSyntaxError(
-                "Parameter 'params.mha_params' is not of type "
-                "mt.tfc.MHAParams. Got: {}.".format(type(params.mha_params))
-            )
-
-        from ..keras_layers import SimpleMHA2D
-
-        n_heads = params.mha_params.n_heads
-        input_dim = x.shape[-1]
-        if params.mha_params.key_dim is None:
-            if input_dim % n_heads != 0:
-                raise tfc.ModelSyntaxError(
-                    "The last dimension ({}) is not divisible by {}.".format(
-                        input_dim, n_heads
-                    )
-                )
-            key_dim = input_dim // n_heads
-        else:
-            key_dim = params.mha_params.key_dim
-        value_dim = (
-            key_dim
-            if params.mha_params.value_dim is None
-            else params.mha_params.value_dim
-        )
-        layer = SimpleMHA2D(num_heads=n_heads, key_dim=key_dim, value_dim=value_dim)
-        x = layer(x)
-        x = layers.Reshape((1, 1, n_heads * value_dim))(x)
     elif params.variant == "mhapool":
         if backend.image_data_format() == "channels_first":
             raise tfc.ModelSyntaxError(
@@ -323,10 +289,11 @@ def MobileNetV3Mixer(
                 "mt.tfc.MHAPool2DCascadeParams. Got: {}.".format(type(mhapool_params))
             )
 
-        from ..keras_layers import MHAPool2D, SimpleMHA2D
+        from ..keras_layers import MHAPool2D
 
         n_heads = mhapool_params.n_heads
         k = 0
+        outputs = []
         while True:
             h = x.shape[1]
             w = x.shape[2]
@@ -339,21 +306,10 @@ def MobileNetV3Mixer(
             value_dim = int(key_dim * mhapool_params.expansion_factor)
             k += 1
             block_name = "MHAPool2DCascade_block{}".format(k)
-            if k > mhapool_params.max_num_pooling_layers:  # SimpleMHA2D
-                if True:
-                    x = layers.GlobalMaxPooling2D(
-                        keepdims=True, name=block_name + "/GlobalMaxPool"
-                    )(x)
-                else:
-                    x = layers.LayerNormalization()(x)
-                    x = SimpleMHA2D(
-                        n_heads,
-                        key_dim,
-                        value_dim=value_dim,
-                        activation=mhapool_params.final_activation,
-                        dropout=mhapool_params.dropout,
-                    )(x)
-                    x = layers.Reshape((1, 1, n_heads * value_dim))(x)
+            if k > mhapool_params.max_num_pooling_layers:  # GlobalMaxPool2D
+                x = layers.GlobalMaxPooling2D(
+                    keepdims=True, name=block_name + "/GlobalMaxPool"
+                )(x)
             else:  # MHAPool2D
                 x = layers.LayerNormalization()(x)
                 if h <= 2 and w <= 2:
@@ -368,13 +324,20 @@ def MobileNetV3Mixer(
                     dropout=mhapool_params.dropout,
                     name=block_name + "/MHAPool",
                 )(x)
+
+            if mhapool_params.output_all:
+                outputs.append(x)
+            else:
+                outputs = [x]
     else:
         raise tfc.ModelSyntaxError(
             "Unknown mixer variant: '{}'.".format(params.variant)
         )
 
     # Create model.
-    model = models.Model(input_tensor, x, name="MobileNetV3{}Mixer".format(model_type))
+    model = models.Model(
+        input_tensor, outputs, name="MobileNetV3{}Mixer".format(model_type)
+    )
 
     return model
 
@@ -541,9 +504,15 @@ def MobileNetV3Split(
         )
         x = mixer_block(x)
         if output_all:
-            outputs.append(x)
+            if isinstance(x, (list, tuple)):
+                outputs.extend(x)
+            else:
+                outputs.append(x)
         else:
-            outputs = [x]
+            if isinstance(x, (list, tuple)):
+                outputs = [x[-1]]
+            else:
+                outputs = [x]
 
         output_block = MobileNetV3Output(
             x,

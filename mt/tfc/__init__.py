@@ -120,6 +120,9 @@ class MHAPool2DCascadeParams(ModelParams):
         activation type for all pooling layers but maybe the last one
     final_activation : str
         activation type for the last layer, which can be MHAPool2D or SimpleMHA2D
+    output_all : bool, optional
+        If False, it returns the output tensor of the last layer. Otherwise, it additionally
+        returns the output tensor of every attention layer before the last layer.
     gen : int
         model generation/family number, starting from 1
     """
@@ -135,6 +138,7 @@ class MHAPool2DCascadeParams(ModelParams):
         max_num_pooling_layers: int = 10,
         activation: str = "swish",
         final_activation: tp.Optional[str] = "swish",
+        output_all: tp.Optional[bool] = False,
         gen: int = 1,
     ):
         super().__init__(gen=gen)
@@ -148,6 +152,7 @@ class MHAPool2DCascadeParams(ModelParams):
         self.final_activation = (
             activation if final_activation is None else final_activation
         )
+        self.output_all = output_all
 
     def to_json(self):
         """Returns an equivalent json object."""
@@ -159,6 +164,7 @@ class MHAPool2DCascadeParams(ModelParams):
             "max_num_pooling_layers": self.max_num_pooling_layers,
             "activation": self.activation,
             "final_activation": self.final_activation,
+            "output_all": self.output_all,
             "gen": self.gen,
         }
 
@@ -173,6 +179,7 @@ class MHAPool2DCascadeParams(ModelParams):
             max_num_pooling_layers=json_obj["max_num_pooling_layers"],
             activation=json_obj["activation"],
             final_activation=json_obj["final_activation"],
+            output_all=json_obj.get("output_all", False),
             gen=json_obj["gen"],
         )
 
@@ -182,14 +189,12 @@ class MobileNetV3MixerParams(ModelParams):
 
     Parameters
     ----------
-    variant : {'mobilenet', 'maxpool', 'mha', 'mhapool'}
+    variant : {'mobilenet', 'maxpool', 'mhapool'}
         Variant of the mixer block. The output tensor has 1x1 spatial resolution. If 'mobilenet' is
         specified, the mixer follows 'mobilenet' style, including mainly 2 Conv layers and one
         GlobalAveragePooling2D layer. If 'maxpool' is specified, grid processing is just a
-        GlobalMaxPool2D layer. If 'mha' is specified, a SimpleMHA2D layer is used. If 'mhapool' is
-        used, a cascade of MHAPool2D layers is used until the last layer outputs a 1x1 tensor.
-    mha_params : mt.tfc.MHAParams, optional
-        The parameters defining the MultiHeadAttention layer. Only valid for 'mha' mixer type.
+        GlobalMaxPool2D layer. If 'mhapool' is used, a cascade of MHAPool2D layers is used until
+        the last layer outputs a 1x1 tensor.
     mhapool_cascade_params : mt.tfc.MHAPool2DCascadeParams, optional
         The parameters defining a cascade of MHAPool2D layers. Only valid for 'mhapool' mixer type.
     gen : int
@@ -201,26 +206,22 @@ class MobileNetV3MixerParams(ModelParams):
     def __init__(
         self,
         variant: str = "mobilenet",
-        mha_params: tp.Optional[MHAParams] = None,
         mhapool_cascade_params: tp.Optional[MHAPool2DCascadeParams] = None,
         gen: int = 1,
     ):
         super().__init__(gen=gen)
 
         self.variant = variant
-        self.mha_params = mha_params
         self.mhapool_cascade_params = mhapool_cascade_params
 
     def to_json(self):
         """Returns an equivalent json object."""
-        mha_params = None if self.mha_params is None else mha_params.to_json()
         if self.mhapool_cascade_params is None:
             mhapool_params = None
         else:
             mhapool_params = self.mhapool_cascade_params.to_json()
         return {
             "variant": self.variant,
-            "mha_params": mha_params,
             "mhapool_cascade_params": mhapool_params,
             "gen": self.gen,
         }
@@ -228,15 +229,11 @@ class MobileNetV3MixerParams(ModelParams):
     @classmethod
     def from_json(cls, json_obj):
         """Instantiates from a json object."""
-        mha_params = json_obj.get("mha_params", None)
-        if mha_params is not None:
-            mha_params = MHAParams.from_json(mha_params)
         mhapool_params = json_obj.get("mhapool_cascade_params", None)
         if mhapool_params is not None:
             mhapool_params = MHAPool2DCascadeParams.from_json(mhapool_params)
         return MobileNetV3MixerParams(
             variant=json_obj["variant"],
-            mha_params=mha_params,
             mhapool_cascade_params=mhapool_params,
             gen=json_obj["gen"],
         )

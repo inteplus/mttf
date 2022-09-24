@@ -17,6 +17,10 @@ class Upsample2D(tf.keras.layers.Layer):
         the dimensionality of each output pixel
     horizontal : bool
         whether to sample along the x-axis (True) or the y-axis (False)
+    kernel_size : int or tuple or list
+        An integer or tuple/list of 2 integers, specifying the height and width of the 2D
+        convolution window. Can be a single integer to specify the same value for all spatial
+        dimensions.
     use_bias : bool
         Whether the convolutional layers use bias vectors/matrices.
     activation : object
@@ -39,6 +43,7 @@ class Upsample2D(tf.keras.layers.Layer):
         self,
         output_dim: int,
         horizontal: bool,
+        kernel_size: tp.Union[int, tuple, list] = 1,
         use_bias: bool = True,
         activation="swish",
         kernel_initializer="glorot_uniform",
@@ -53,6 +58,7 @@ class Upsample2D(tf.keras.layers.Layer):
 
         self._output_dim = output_dim
         self._horizontal = horizontal
+        self._kernel_size = kernel_size
         self._use_bias = use_bias
         self._activation = tf.keras.activations.get(activation)
         self._kernel_initializer = tf.keras.initializers.get(kernel_initializer)
@@ -64,7 +70,7 @@ class Upsample2D(tf.keras.layers.Layer):
 
         self.conv_layer = tf.keras.layers.Conv2D(
             self._output_dim * 2,  # filters
-            1,  # kernel_size
+            self._kernel_size,  # kernel_size
             use_bias=self._use_bias,
             activation=self._activation,
             kernel_initializer=self._kernel_initializer,
@@ -143,6 +149,7 @@ class Upsample2D(tf.keras.layers.Layer):
         config = {
             "output_dim": self._output_dim,
             "horizontal": self._horizontal,
+            "kernel_size": self._kernel_size,
             "use_bias": self._use_bias,
             "activation": tf.keras.activations.serialize(self._activation),
             "kernel_initializer": tf.keras.initializers.serialize(
@@ -173,6 +180,10 @@ class Downsample2D(tf.keras.layers.Layer):
         the dimensionality of each output pixel
     horizontal : bool
         whether to sample along the x-axis (True) or the y-axis (False)
+    kernel_size : int or tuple or list
+        An integer or tuple/list of 2 integers, specifying the height and width of the 2D
+        convolution window. Can be a single integer to specify the same value for all spatial
+        dimensions.
     use_bias : bool
         Whether the convolutional layers use bias vectors/matrices.
     activation : object
@@ -195,6 +206,7 @@ class Downsample2D(tf.keras.layers.Layer):
         self,
         output_dim: int,
         horizontal: bool,
+        kernel_size: tp.Union[int, tuple, list] = 1,
         use_bias: bool = True,
         activation="swish",
         kernel_initializer="glorot_uniform",
@@ -209,6 +221,7 @@ class Downsample2D(tf.keras.layers.Layer):
 
         self._output_dim = output_dim
         self._horizontal = horizontal
+        self._kernel_size = kernel_size
         self._use_bias = use_bias
         self._activation = tf.keras.activations.get(activation)
         self._kernel_initializer = tf.keras.initializers.get(kernel_initializer)
@@ -220,7 +233,7 @@ class Downsample2D(tf.keras.layers.Layer):
 
         self.conv_layer = tf.keras.layers.Conv2D(
             self._output_dim,  # filters
-            1,  # kernel_size
+            self._kernel_size,  # kernel_size
             use_bias=self._use_bias,
             activation=self._activation,
             kernel_initializer=self._kernel_initializer,
@@ -311,6 +324,7 @@ class Downsample2D(tf.keras.layers.Layer):
         config = {
             "output_dim": self._output_dim,
             "horizontal": self._horizontal,
+            "kernel_size": self._kernel_size,
             "use_bias": self._use_bias,
             "activation": tf.keras.activations.serialize(self._activation),
             "kernel_initializer": tf.keras.initializers.serialize(

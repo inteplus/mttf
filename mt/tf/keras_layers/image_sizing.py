@@ -9,22 +9,18 @@ __all__ = ["Upsize2D", "Downsize2D"]
 
 
 class Upsize2D(tf.keras.layers.Layer):
-    """Upsizing along the x-axis or the y-axis via convolution.
+    """Upsizing along the x-axis and the y-axis via convolution.
 
-    Upsizing means doubling the dimensionality of the given axis.
+    Upsizing means doubling the width and the height.
 
     Parameters
     ----------
     output_dim : int
         the dimensionality of each output pixel
-    horizontal : bool
-        whether to size along the x-axis (True) or the y-axis (False)
     kernel_size : int or tuple or list
         An integer or tuple/list of 2 integers, specifying the height and width of the 2D
         convolution window. Can be a single integer to specify the same value for all spatial
         dimensions.
-    use_bias : bool
-        Whether the convolutional layers use bias vectors/matrices.
     activation : object
         activation for the convolution
     kernel_initializer : object
@@ -44,9 +40,7 @@ class Upsize2D(tf.keras.layers.Layer):
     def __init__(
         self,
         output_dim: int,
-        horizontal: bool,
         kernel_size: tp.Union[int, tuple, list] = 1,
-        use_bias: bool = True,
         activation="tanh",  # we expect the input pixel values to be lower and upper-bounded
         kernel_initializer="glorot_uniform",
         bias_initializer="zeros",
@@ -59,9 +53,7 @@ class Upsize2D(tf.keras.layers.Layer):
         super(Upsize2D, self).__init__(**kwargs)
 
         self._output_dim = output_dim
-        self._horizontal = horizontal
         self._kernel_size = kernel_size
-        self._use_bias = use_bias
         self._activation = tf.keras.activations.get(activation)
         self._kernel_initializer = tf.keras.initializers.get(kernel_initializer)
         self._bias_initializer = tf.keras.initializers.get(bias_initializer)
@@ -70,10 +62,24 @@ class Upsize2D(tf.keras.layers.Layer):
         self._kernel_constraint = tf.keras.constraints.get(kernel_constraint)
         self._bias_constraint = tf.keras.constraints.get(bias_constraint)
 
-        self.conv_layer = tf.keras.layers.Conv2D(
-            self._output_dim * 2,  # filters
+        self.prenorm1_layer = layers.LayerNormalization(name="prenorm1")
+        self.expansion_layer = layers.Conv2D(
+            self._output_dim * 8,
+            kernel_size=1,
+            padding="same",
+            activation="swish",
+            kernel_initializer=self._kernel_initializer,
+            bias_initializer=self._bias_initializer,
+            kernel_regularizer=self._kernel_regularizer,
+            bias_regularizer=self._bias_regularizer,
+            kernel_constraint=self._kernel_constraint,
+            bias_constraint=self._bias_constraint,
+            name="expand",
+        )
+        self.prenorm2_layer = layers.LayerNormalization(name="prenorm2")
+        self.projection_layer = tf.keras.layers.Conv2D(
+            self._output_dim * 4,  # filters
             self._kernel_size,  # kernel_size
-            use_bias=self._use_bias,
             activation=self._activation,
             kernel_initializer=self._kernel_initializer,
             bias_initializer=self._bias_initializer,
@@ -81,42 +87,36 @@ class Upsize2D(tf.keras.layers.Layer):
             bias_regularizer=self._bias_regularizer,
             kernel_constraint=self._kernel_constraint,
             bias_constraint=self._bias_constraint,
+            name="project",
         )
 
     def call(self, x):
-        x = self.conv_layer(x)
+        x = self.prenorm1_layer(x)
+        x = self.expansion_layer(x)
+        x = self.prenorm2_layer(x)
+        x = self.projection_layer(x)
         input_shape = tf.shape(x)
-        if self._horizontal:
-            x = tf.reshape(
-                x,
-                [
-                    input_shape[0],
-                    input_shape[1],
-                    input_shape[2] * 2,
-                    input_shape[3] // 2,
-                ],
-            )
-        else:
-            x = tf.reshape(
-                x,
-                [
-                    input_shape[0],
-                    input_shape[1],
-                    input_shape[2],
-                    2,
-                    input_shape[3] // 2,
-                ],
-            )
-            x = tf.transpose(x, perm=[0, 1, 3, 2, 4])
-            x = tf.reshape(
-                x,
-                [
-                    input_shape[0],
-                    input_shape[1] * 2,
-                    input_shape[2],
-                    input_shape[3] // 2,
-                ],
-            )
+        x = tf.reshape(
+            x,
+            [
+                input_shape[0],
+                input_shape[1],
+                input_shape[2],
+                2,
+                2,
+                input_shape[3] // 4,
+            ],
+        )
+        x = tf.transpose(x, perm=[0, 1, 3, 2, 4, 5])
+        x = tf.reshape(
+            x,
+            [
+                input_shape[0],
+                input_shape[1] * 2,
+                input_shape[2] * 2,
+                input_shape[3] // 4,
+            ],
+        )
 
         return x
 
@@ -128,21 +128,12 @@ class Upsize2D(tf.keras.layers.Layer):
                 "Expected input shape to be (B, H, W, C). Got: {}.".format(input_shape)
             )
 
-        if self._horizontal:
-            output_shape = (
-                input_shape[0],
-                input_shape[1],
-                input_shape[2] * 2,
-                self._output_dim,
-            )
-        else:
-            output_shape = (
-                input_shape[0],
-                input_shape[1] * 2,
-                input_shape[2],
-                self._output_dim,
-            )
-
+        output_shape = (
+            input_shape[0],
+            input_shape[1] * 2,
+            input_shape[2] * 2,
+            self._output_dim,
+        )
         return output_shape
 
     compute_output_shape.__doc__ = tf.keras.layers.Layer.compute_output_shape.__doc__
@@ -150,9 +141,7 @@ class Upsize2D(tf.keras.layers.Layer):
     def get_config(self):
         config = {
             "output_dim": self._output_dim,
-            "horizontal": self._horizontal,
             "kernel_size": self._kernel_size,
-            "use_bias": self._use_bias,
             "activation": tf.keras.activations.serialize(self._activation),
             "kernel_initializer": tf.keras.initializers.serialize(
                 self._kernel_initializer
@@ -174,22 +163,18 @@ class Upsize2D(tf.keras.layers.Layer):
 
 
 class Downsize2D(tf.keras.layers.Layer):
-    """Downsizing along the x-axis or the y-axis via convolution.
+    """Downsizing along the x-axis and the y-axis via convolution.
 
-    Downsizing means halving the dimensionality of the given axis.
+    Downsizing means halving the width and the height.
 
     Parameters
     ----------
     output_dim : int
         the dimensionality of each output pixel
-    horizontal : bool
-        whether to size along the x-axis (True) or the y-axis (False)
     kernel_size : int or tuple or list
         An integer or tuple/list of 2 integers, specifying the height and width of the 2D
         convolution window. Can be a single integer to specify the same value for all spatial
         dimensions.
-    use_bias : bool
-        Whether the convolutional layers use bias vectors/matrices.
     activation : object
         activation for the convolution
     kernel_initializer : object
@@ -209,10 +194,8 @@ class Downsize2D(tf.keras.layers.Layer):
     def __init__(
         self,
         output_dim: int,
-        horizontal: bool,
         kernel_size: tp.Union[int, tuple, list] = 1,
-        use_bias: bool = True,
-        activation="swish",
+        activation="tanh",  # we expect the input pixel values to be lower and upper-bounded
         kernel_initializer="glorot_uniform",
         bias_initializer="zeros",
         kernel_regularizer=None,
@@ -224,9 +207,7 @@ class Downsize2D(tf.keras.layers.Layer):
         super(Downsize2D, self).__init__(**kwargs)
 
         self._output_dim = output_dim
-        self._horizontal = horizontal
         self._kernel_size = kernel_size
-        self._use_bias = use_bias
         self._activation = tf.keras.activations.get(activation)
         self._kernel_initializer = tf.keras.initializers.get(kernel_initializer)
         self._bias_initializer = tf.keras.initializers.get(bias_initializer)
@@ -235,10 +216,24 @@ class Downsize2D(tf.keras.layers.Layer):
         self._kernel_constraint = tf.keras.constraints.get(kernel_constraint)
         self._bias_constraint = tf.keras.constraints.get(bias_constraint)
 
-        self.conv_layer = tf.keras.layers.Conv2D(
+        self.prenorm1_layer = layers.LayerNormalization(name="prenorm1")
+        self.expansion_layer = layers.Conv2D(
+            self._output_dim * 2,
+            kernel_size=1,
+            padding="same",
+            activation="swish",
+            kernel_initializer=self._kernel_initializer,
+            bias_initializer=self._bias_initializer,
+            kernel_regularizer=self._kernel_regularizer,
+            bias_regularizer=self._bias_regularizer,
+            kernel_constraint=self._kernel_constraint,
+            bias_constraint=self._bias_constraint,
+            name="expand",
+        )
+        self.prenorm2_layer = layers.LayerNormalization(name="prenorm2")
+        self.projection_layer = tf.keras.layers.Conv2D(
             self._output_dim,  # filters
             self._kernel_size,  # kernel_size
-            use_bias=self._use_bias,
             activation=self._activation,
             kernel_initializer=self._kernel_initializer,
             bias_initializer=self._bias_initializer,
@@ -246,42 +241,36 @@ class Downsize2D(tf.keras.layers.Layer):
             bias_regularizer=self._bias_regularizer,
             kernel_constraint=self._kernel_constraint,
             bias_constraint=self._bias_constraint,
+            name="project",
         )
 
     def call(self, x):
         input_shape = tf.shape(x)
-        if self._horizontal:
-            x = tf.reshape(
-                x,
-                [
-                    input_shape[0],
-                    input_shape[1],
-                    input_shape[2] // 2,
-                    input_shape[3] * 2,
-                ],
-            )
-        else:
-            x = tf.reshape(
-                x,
-                [
-                    input_shape[0],
-                    input_shape[1] // 2,
-                    2,
-                    input_shape[2],
-                    input_shape[3],
-                ],
-            )
-            x = tf.transpose(x, perm=[0, 1, 3, 2, 4])
-            x = tf.reshape(
-                x,
-                [
-                    input_shape[0],
-                    input_shape[1] // 2,
-                    input_shape[2],
-                    input_shape[3] * 2,
-                ],
-            )
-        x = self.conv_layer(x)
+        x = tf.reshape(
+            x,
+            [
+                input_shape[0],
+                input_shape[1] // 2,
+                2,
+                input_shape[2] // 2,
+                2,
+                input_shape[3],
+            ],
+        )
+        x = tf.transpose(x, perm=[0, 1, 3, 2, 4, 5])
+        x = tf.reshape(
+            x,
+            [
+                input_shape[0],
+                input_shape[1] // 2,
+                input_shape[2] // 2,
+                input_shape[3] * 4,
+            ],
+        )
+        x = self.prenorm1_layer(x)
+        x = self.expansion_layer(x)
+        x = self.prenorm2_layer(x)
+        x = self.projection_layer(x)
 
         return x
 
@@ -293,32 +282,18 @@ class Downsize2D(tf.keras.layers.Layer):
                 "Expected input shape to be (B, H, W, C). Got: {}.".format(input_shape)
             )
 
-        if self._horizontal:
-            if input_shape[2] % 2 != 0:
-                raise ValueError(
-                    "In downsizing along the x-axis, the width must be even. Got {}.".format(
-                        input_shape[2]
-                    )
-                )
-            output_shape = (
-                input_shape[0],
-                input_shape[1],
-                input_shape[2] // 2,
-                self._output_dim,
-            )
-        else:
-            if input_shape[1] % 2 != 0:
-                raise ValueError(
-                    "In downsizing along the y-axis, the height must be even. Got {}.".format(
-                        input_shape[1]
-                    )
-                )
-            output_shape = (
-                input_shape[0],
-                input_shape[1] // 2,
-                input_shape[2],
-                self._output_dim,
-            )
+        if input_shape[1] % 2 != 0:
+            raise ValueError("The height must be even. Got {}.".format(input_shape[1]))
+
+        if input_shape[2] % 2 != 0:
+            raise ValueError("The width must be even. Got {}.".format(input_shape[2]))
+
+        output_shape = (
+            input_shape[0],
+            input_shape[1] // 2,
+            input_shape[2] // 2,
+            self._output_dim,
+        )
 
         return output_shape
 
@@ -327,9 +302,7 @@ class Downsize2D(tf.keras.layers.Layer):
     def get_config(self):
         config = {
             "output_dim": self._output_dim,
-            "horizontal": self._horizontal,
             "kernel_size": self._kernel_size,
-            "use_bias": self._use_bias,
             "activation": tf.keras.activations.serialize(self._activation),
             "kernel_initializer": tf.keras.initializers.serialize(
                 self._kernel_initializer

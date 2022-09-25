@@ -47,7 +47,7 @@ class Upsize2D(tf.keras.layers.Layer):
         horizontal: bool,
         kernel_size: tp.Union[int, tuple, list] = 1,
         use_bias: bool = True,
-        activation="swish",
+        activation="tanh",  # we expect the input pixel values to be lower and upper-bounded
         kernel_initializer="glorot_uniform",
         bias_initializer="zeros",
         kernel_regularizer=None,

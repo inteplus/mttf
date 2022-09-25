@@ -1,22 +1,24 @@
-"""Module involves upsampling and downsampling images in each axis individually via convolution."""
+"""Module involves upsizing and downsizing images in each axis individually via convolution."""
 
 import typing as tp
 
 import tensorflow as tf
 
 
-__all__ = ["Upsample2D", "Downsample2D"]
+__all__ = ["Upsize2D", "Downsize2D"]
 
 
-class Upsample2D(tf.keras.layers.Layer):
-    """Upsampling along the x-axis or the y-axis via convolution.
+class Upsize2D(tf.keras.layers.Layer):
+    """Upsizing along the x-axis or the y-axis via convolution.
+
+    Upsizing means doubling the dimensionality of the given axis.
 
     Parameters
     ----------
     output_dim : int
         the dimensionality of each output pixel
     horizontal : bool
-        whether to sample along the x-axis (True) or the y-axis (False)
+        whether to size along the x-axis (True) or the y-axis (False)
     kernel_size : int or tuple or list
         An integer or tuple/list of 2 integers, specifying the height and width of the 2D
         convolution window. Can be a single integer to specify the same value for all spatial
@@ -54,7 +56,7 @@ class Upsample2D(tf.keras.layers.Layer):
         bias_constraint=None,
         **kwargs
     ):
-        super(Upsample2D, self).__init__(**kwargs)
+        super(Upsize2D, self).__init__(**kwargs)
 
         self._output_dim = output_dim
         self._horizontal = horizontal
@@ -171,15 +173,17 @@ class Upsample2D(tf.keras.layers.Layer):
     get_config.__doc__ = tf.keras.layers.Layer.get_config.__doc__
 
 
-class Downsample2D(tf.keras.layers.Layer):
-    """Downsampling along the x-axis or the y-axis via convolution.
+class Downsize2D(tf.keras.layers.Layer):
+    """Downsizing along the x-axis or the y-axis via convolution.
+
+    Downsizing means halving the dimensionality of the given axis.
 
     Parameters
     ----------
     output_dim : int
         the dimensionality of each output pixel
     horizontal : bool
-        whether to sample along the x-axis (True) or the y-axis (False)
+        whether to size along the x-axis (True) or the y-axis (False)
     kernel_size : int or tuple or list
         An integer or tuple/list of 2 integers, specifying the height and width of the 2D
         convolution window. Can be a single integer to specify the same value for all spatial
@@ -217,7 +221,7 @@ class Downsample2D(tf.keras.layers.Layer):
         bias_constraint=None,
         **kwargs
     ):
-        super(Downsample2D, self).__init__(**kwargs)
+        super(Downsize2D, self).__init__(**kwargs)
 
         self._output_dim = output_dim
         self._horizontal = horizontal
@@ -292,7 +296,7 @@ class Downsample2D(tf.keras.layers.Layer):
         if self._horizontal:
             if input_shape[2] % 2 != 0:
                 raise ValueError(
-                    "In downsampling along the x-axis, the width must be even. Got {}.".format(
+                    "In downsizing along the x-axis, the width must be even. Got {}.".format(
                         input_shape[2]
                     )
                 )
@@ -305,7 +309,7 @@ class Downsample2D(tf.keras.layers.Layer):
         else:
             if input_shape[1] % 2 != 0:
                 raise ValueError(
-                    "In downsampling along the y-axis, the height must be even. Got {}.".format(
+                    "In downsizing along the y-axis, the height must be even. Got {}.".format(
                         input_shape[1]
                     )
                 )

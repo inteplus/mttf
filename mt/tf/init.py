@@ -32,11 +32,11 @@ def init():
         mobilenet_v3_split.MobileNetV3Split,
     )
 
-    from .keras_layers import Identical, Upsample2D, Downsample2D
+    from .keras_layers import Identical, Upsize2D, Downsize2D
 
     setattr(tensorflow.keras.layers, "Identical", Identical)
-    setattr(tensorflow.keras.layers, "Upsample2D", Upsample2D)
-    setattr(tensorflow.keras.layers, "Downsample2D", Downsample2D)
+    setattr(tensorflow.keras.layers, "Upsize2D", Upsize2D)
+    setattr(tensorflow.keras.layers, "Downsize2D", Downsize2D)
 
     if tf_ver < version.parse("2.8"):
         # monkey-patch efficientnet_v2

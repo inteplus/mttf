@@ -156,7 +156,7 @@ class Upsize2D(tf.keras.layers.Layer):
             ),
             "bias_constraint": tf.keras.constraints.serialize(self._bias_constraint),
         }
-        base_config = super(SimpleMHA2D, self).get_config()
+        base_config = super(Upsize2D, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
     get_config.__doc__ = tf.keras.layers.Layer.get_config.__doc__
@@ -317,7 +317,7 @@ class Downsize2D(tf.keras.layers.Layer):
             ),
             "bias_constraint": tf.keras.constraints.serialize(self._bias_constraint),
         }
-        base_config = super(SimpleMHA2D, self).get_config()
+        base_config = super(Downsize2D, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
     get_config.__doc__ = tf.keras.layers.Layer.get_config.__doc__

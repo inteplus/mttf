@@ -90,11 +90,11 @@ class Upsize2D(tf.keras.layers.Layer):
             name="project",
         )
 
-    def call(self, x):
-        x = self.prenorm1_layer(x)
-        x = self.expansion_layer(x)
-        x = self.prenorm2_layer(x)
-        x = self.projection_layer(x)
+    def call(self, x, training: bool = False):
+        x = self.prenorm1_layer(x, training=training)
+        x = self.expansion_layer(x, training=training)
+        x = self.prenorm2_layer(x, training=training)
+        x = self.projection_layer(x, training=training)
         input_shape = tf.shape(x)
         x = tf.reshape(
             x,
@@ -244,7 +244,7 @@ class Downsize2D(tf.keras.layers.Layer):
             name="project",
         )
 
-    def call(self, x):
+    def call(self, x, training: bool = False):
         input_shape = tf.shape(x)
         x = tf.reshape(
             x,
@@ -267,10 +267,10 @@ class Downsize2D(tf.keras.layers.Layer):
                 input_shape[3] * 4,
             ],
         )
-        x = self.prenorm1_layer(x)
-        x = self.expansion_layer(x)
-        x = self.prenorm2_layer(x)
-        x = self.projection_layer(x)
+        x = self.prenorm1_layer(x, training=training)
+        x = self.expansion_layer(x, training=training)
+        x = self.prenorm2_layer(x, training=training)
+        x = self.projection_layer(x, training=training)
 
         return x
 

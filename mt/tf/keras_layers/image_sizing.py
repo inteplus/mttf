@@ -41,7 +41,7 @@ class Upsize2D(tf.keras.layers.Layer):
         self,
         output_dim: int,
         kernel_size: tp.Union[int, tuple, list] = 1,
-        activation="tanh",  # we expect the input pixel values to be lower and upper-bounded
+        activation="sigmoid",  # we expect the input pixel values to be lower and upper-bounded
         kernel_initializer="glorot_uniform",
         bias_initializer="zeros",
         kernel_regularizer=None,
@@ -195,7 +195,7 @@ class Downsize2D(tf.keras.layers.Layer):
         self,
         output_dim: int,
         kernel_size: tp.Union[int, tuple, list] = 1,
-        activation="tanh",  # we expect the input pixel values to be lower and upper-bounded
+        activation="sigmoid",  # we expect the input pixel values to be lower and upper-bounded
         kernel_initializer="glorot_uniform",
         bias_initializer="zeros",
         kernel_regularizer=None,

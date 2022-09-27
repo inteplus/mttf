@@ -40,7 +40,7 @@ class Upsize2D(tf.keras.layers.Layer):
     def __init__(
         self,
         output_dim: int,
-        kernel_size: tp.Union[int, tuple, list] = 1,
+        kernel_size: tp.Union[int, tuple, list] = 3,
         activation="sigmoid",  # we expect the input pixel values to be lower and upper-bounded
         kernel_initializer="glorot_uniform",
         bias_initializer="zeros",
@@ -65,7 +65,7 @@ class Upsize2D(tf.keras.layers.Layer):
         self.prenorm1_layer = tf.keras.layers.LayerNormalization(name="prenorm1")
         self.expansion_layer = tf.keras.layers.Conv2D(
             self._output_dim * 8,
-            kernel_size=1,
+            self._kernel_size,
             padding="same",
             activation="swish",
             kernel_initializer=self._kernel_initializer,
@@ -78,7 +78,7 @@ class Upsize2D(tf.keras.layers.Layer):
         )
         self.prenorm2_layer = tf.keras.layers.LayerNormalization(name="prenorm2")
         self.projection_layer = tf.keras.layers.Conv2D(
-            self._output_dim * 4,  # filters
+            self._output_dim,  # filters
             self._kernel_size,  # kernel_size
             activation=self._activation,
             kernel_initializer=self._kernel_initializer,
@@ -93,8 +93,6 @@ class Upsize2D(tf.keras.layers.Layer):
     def call(self, x, training: bool = False):
         x = self.prenorm1_layer(x, training=training)
         x = self.expansion_layer(x, training=training)
-        x = self.prenorm2_layer(x, training=training)
-        x = self.projection_layer(x, training=training)
         input_shape = tf.shape(x)
         x = tf.reshape(
             x,
@@ -117,6 +115,8 @@ class Upsize2D(tf.keras.layers.Layer):
                 input_shape[3] // 4,
             ],
         )
+        x = self.prenorm2_layer(x, training=training)
+        x = self.projection_layer(x, training=training)
 
         return x
 
@@ -194,7 +194,7 @@ class Downsize2D(tf.keras.layers.Layer):
     def __init__(
         self,
         output_dim: int,
-        kernel_size: tp.Union[int, tuple, list] = 1,
+        kernel_size: tp.Union[int, tuple, list] = 3,
         activation="sigmoid",  # we expect the input pixel values to be lower and upper-bounded
         kernel_initializer="glorot_uniform",
         bias_initializer="zeros",
@@ -218,8 +218,8 @@ class Downsize2D(tf.keras.layers.Layer):
 
         self.prenorm1_layer = tf.keras.layers.LayerNormalization(name="prenorm1")
         self.expansion_layer = tf.keras.layers.Conv2D(
-            self._output_dim * 2,
-            kernel_size=1,
+            self._output_dim,
+            self._kernel_size,
             padding="same",
             activation="swish",
             kernel_initializer=self._kernel_initializer,
@@ -245,6 +245,8 @@ class Downsize2D(tf.keras.layers.Layer):
         )
 
     def call(self, x, training: bool = False):
+        x = self.prenorm1_layer(x, training=training)
+        x = self.expansion_layer(x, training=training)
         input_shape = tf.shape(x)
         x = tf.reshape(
             x,
@@ -267,8 +269,6 @@ class Downsize2D(tf.keras.layers.Layer):
                 input_shape[3] * 4,
             ],
         )
-        x = self.prenorm1_layer(x, training=training)
-        x = self.expansion_layer(x, training=training)
         x = self.prenorm2_layer(x, training=training)
         x = self.projection_layer(x, training=training)
 

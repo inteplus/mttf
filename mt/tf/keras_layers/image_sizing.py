@@ -73,10 +73,12 @@ class Downsize2D(tf.keras.layers.Layer):
         self._kernel_constraint = tf.keras.constraints.get(kernel_constraint)
         self._bias_constraint = tf.keras.constraints.get(bias_constraint)
 
+        self.prenorm1_layer = tf.keras.layers.LayerNormalization(name="prenorm1")
         self.expansion_layer = tf.keras.layers.Conv2D(
-            self._residual_dim * 8,
+            self._residual_dim * 4,
             self._kernel_size,
             padding="same",
+            activation="swish",
             kernel_initializer=self._kernel_initializer,
             bias_initializer=self._bias_initializer,
             kernel_regularizer=self._kernel_regularizer,
@@ -85,15 +87,17 @@ class Downsize2D(tf.keras.layers.Layer):
             bias_constraint=self._bias_constraint,
             name="expand",
         )
-        self.norm_layer = tf.keras.layers.BatchNormalization(
-            axis=3,
-            epsilon=1e-3,
-            momentum=0.999,
-            name="batchnorm",
-        )
+        self.prenorm2_layer = tf.keras.layers.LayerNormalization(name="prenorm2")
+        # self.norm_layer = tf.keras.layers.BatchNormalization(
+        #    axis=3,
+        #    epsilon=1e-3,
+        #    momentum=0.999,
+        #    name="batchnorm",
+        # )
         self.projection_layer = tf.keras.layers.Conv2D(
             self._residual_dim,  # filters
             self._kernel_size,  # kernel_size
+            padding="same",
             activation="sigmoid",
             kernel_initializer=self._kernel_initializer,
             bias_initializer=self._bias_initializer,
@@ -130,9 +134,11 @@ class Downsize2D(tf.keras.layers.Layer):
                 input_shape[3] * 4,
             ],
         )
+        x = self.prenorm1_layer(x, training=training)
         x = self.expansion_layer(x, training=training)
-        x = self.norm_layer(x, training=training)
-        x = tf.nn.swish(x)
+        # x = self.norm_layer(x, training=training)
+        # x = tf.nn.swish(x)
+        x = self.prenorm2_layer(x, training=training)
         x = self.projection_layer(x, training=training)
         x = tf.concat([x_avg, x], axis=3)
 
@@ -256,10 +262,12 @@ class Upsize2D(tf.keras.layers.Layer):
         self._kernel_constraint = tf.keras.constraints.get(kernel_constraint)
         self._bias_constraint = tf.keras.constraints.get(bias_constraint)
 
+        self.prenorm1_layer = tf.keras.layers.LayerNormalization(name="prenorm1")
         self.expansion_layer = tf.keras.layers.Conv2D(
-            self._residual_dim * 8,
+            self._residual_dim * 4,
             self._kernel_size,
             padding="same",
+            activation="swish",
             kernel_initializer=self._kernel_initializer,
             bias_initializer=self._bias_initializer,
             kernel_regularizer=self._kernel_regularizer,
@@ -268,15 +276,17 @@ class Upsize2D(tf.keras.layers.Layer):
             bias_constraint=self._bias_constraint,
             name="expand",
         )
-        self.norm_layer = tf.keras.layers.BatchNormalization(
-            axis=3,
-            epsilon=1e-3,
-            momentum=0.999,
-            name="batchnorm",
-        )
+        self.prenorm2_layer = tf.keras.layers.LayerNormalization(name="prenorm2")
+        # self.norm_layer = tf.keras.layers.BatchNormalization(
+        #    axis=3,
+        #    epsilon=1e-3,
+        #    momentum=0.999,
+        #    name="batchnorm",
+        # )
         self.projection_layer = tf.keras.layers.Conv2D(
             self._output_dim * 4,  # filters
             self._kernel_size,  # kernel_size
+            padding="same",
             activation="tanh",
             kernel_initializer=self._kernel_initializer,
             bias_initializer=self._bias_initializer,
@@ -291,9 +301,11 @@ class Upsize2D(tf.keras.layers.Layer):
         x_avg = x[:, :, :, : self._output_dim]  # means
         x_avg = x_avg[:, :, :, tf.newaxis, tf.newaxis, :]
         x = x[:, :, :, self._output_dim :]  # residuals
+        x = self.prenorm1_layer(x, training=training)
         x = self.expansion_layer(x, training=training)
-        x = self.norm_layer(x, training=training)
-        x = tf.nn.swish(x)
+        # x = self.norm_layer(x, training=training)
+        # x = tf.nn.swish(x)
+        x = self.prenorm2_layer(x, training=training)
         x = self.projection_layer(x, training=training)
         input_shape = tf.shape(x)
         x = tf.reshape(

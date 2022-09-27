@@ -1,4 +1,4 @@
-"""Module involves upsizing and downsizing images in each axis individually via convolution."""
+"""Module involves upsizing and downsizing images in each axis individually using convolutions of residuals."""
 
 import typing as tp
 
@@ -12,7 +12,7 @@ __all__ = [
 
 
 class Downsize2D(tf.keras.layers.Layer):
-    """Downsizing along the x-axis and the y-axis via convolution.
+    """Downsizing along the x-axis and the y-axis using convolutions of residuals.
 
     Downsizing means halving the width and the height.
 
@@ -195,7 +195,7 @@ class Downsize2D(tf.keras.layers.Layer):
 
 
 class Upsize2D(tf.keras.layers.Layer):
-    """Upsizing along the x-axis and the y-axis via convolution.
+    """Upsizing along the x-axis and the y-axis using convolutions of residuals.
 
     Upsizing means doubling the width and the height.
 
@@ -275,7 +275,7 @@ class Upsize2D(tf.keras.layers.Layer):
             name="batchnorm",
         )
         self.projection_layer = tf.keras.layers.Conv2D(
-            self._residual_dim * 4,  # filters
+            self._output_dim * 4,  # filters
             self._kernel_size,  # kernel_size
             activation="tanh",
             kernel_initializer=self._kernel_initializer,
@@ -304,7 +304,7 @@ class Upsize2D(tf.keras.layers.Layer):
                 input_shape[2],
                 2,
                 2,
-                input_shape[3] // 4,
+                self._output_dim,
             ],
         )
         x += x_avg
@@ -315,7 +315,7 @@ class Upsize2D(tf.keras.layers.Layer):
                 input_shape[0],
                 input_shape[1] * 2,
                 input_shape[2] * 2,
-                input_shape[3] // 4,
+                self._output_dim,
             ],
         )
 

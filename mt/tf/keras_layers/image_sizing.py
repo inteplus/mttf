@@ -387,8 +387,7 @@ class Upsize2D(tf.keras.layers.Layer):
 class Downsize2D_V2(tf.keras.layers.Layer):
     """Downsizing along the x-axis and the y-axis using convolutions of residuals.
 
-    Downsizing means halving the width and the height and doubling the number of channels. Input
-    and output images contain pixel logits.
+    Downsizing means halving the width and the height and doubling the number of channels.
 
     Parameters
     ----------
@@ -459,7 +458,7 @@ class Downsize2D_V2(tf.keras.layers.Layer):
             self._input_dim,
             self._kernel_size,
             padding="same",
-            activation=None,  # to have logits
+            activation="tanh",  # output range (-1., 1.)
             kernel_initializer=self._kernel_initializer,
             bias_initializer=self._bias_initializer,
             kernel_regularizer=self._kernel_regularizer,
@@ -501,7 +500,7 @@ class Downsize2D_V2(tf.keras.layers.Layer):
         x = self.projection_layer(x, training=training)
         x = tf.concat(
             [x_avg + x, x_avg - x], axis=3
-        )  # to make the channels homogeneous
+        )  # to make the channels homogeneous, although new range (-1., 2.)
 
         return x
 
@@ -564,8 +563,7 @@ class Downsize2D_V2(tf.keras.layers.Layer):
 class Upsize2D_V2(tf.keras.layers.Layer):
     """Upsizing along the x-axis and the y-axis using convolutions of residuals.
 
-    Upsizing means doubling the width and the height and halving the number of channels. Input and
-    output images contain pixel logits.
+    Upsizing means doubling the width and the height and halving the number of channels.
 
     Parameters
     ----------
@@ -641,7 +639,7 @@ class Upsize2D_V2(tf.keras.layers.Layer):
             self._input_dim * 2,
             self._kernel_size,
             padding="same",
-            activation=None,  # to have logits
+            activation="tanh",  # output range (-1., 1.)
             kernel_initializer=self._kernel_initializer,
             bias_initializer=self._bias_initializer,
             kernel_regularizer=self._kernel_regularizer,
@@ -654,9 +652,9 @@ class Upsize2D_V2(tf.keras.layers.Layer):
     def call(self, x, training: bool = False):
         x_plus = x[:, :, :, : self._input_dim // 2]
         x_minus = x[:, :, :, self._input_dim // 2 :]
-        x_avg = (x_plus + x_minus) * 0.5  # means
+        x_avg = (x_plus + x_minus) * 0.5  # means, expected range (0., 1.)
         x_avg = x_avg[:, :, :, tf.newaxis, tf.newaxis, :]
-        x = (x_plus - x_minus) * 0.5  # residuals
+        x = (x_plus - x_minus) * 0.5  # residuals, expected range (-1., 1.)
         x = self.prenorm1_layer(x, training=training)
         x = self.expansion_layer(x, training=training)
         x = self.prenorm2_layer(x, training=training)

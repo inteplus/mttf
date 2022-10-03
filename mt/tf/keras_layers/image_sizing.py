@@ -15,6 +15,16 @@ __all__ = [
 ]
 
 
+def asig2(y):  # input (0., 1.)
+    y = y * 0.998 + 0.001  # (0.001, 0.999)
+    return asigmoid(y)  # (-6.9, +6.9)
+
+
+def sig2(x):  # input (-6.9, +6.9)
+    y = sigmoid(x)  # (0.001, 0.999)
+    return (y - 0.001) / 0.998  # (0., 1.)
+
+
 class Downsize2D(tf.keras.layers.Layer):
     """Downsizing along the x-axis and the y-axis using convolutions of residuals.
 
@@ -500,11 +510,11 @@ class Downsize2D_V2(tf.keras.layers.Layer):
         x = self.expansion_layer(x, training=training)
         x = self.prenorm2_layer(x, training=training)
         x = self.projection_layer(x, training=training)
-        x_avg = asigmoid(x_avg)
+        x_avg = asig2(x_avg)
         x = tf.concat(
             [x_avg + x, x_avg - x], axis=3
         )  # to make the channels homogeneous
-        x = tf.sigmoid(x)
+        x = sig2(x)
 
         return x
 
@@ -654,11 +664,11 @@ class Upsize2D_V2(tf.keras.layers.Layer):
         )
 
     def call(self, x, training: bool = False):
-        x = asigmoid(x)
+        x = asig2(x)
         x_plus = x[:, :, :, : self._input_dim // 2]
         x_minus = x[:, :, :, self._input_dim // 2 :]
         x_avg = (x_plus + x_minus) * 0.5  # means, logits
-        x_avg = tf.sigmoid(x_avg)  # range (0., 1.)
+        x_avg = sig2(x_avg)  # range (0., 1.)
         x_avg = x_avg[:, :, :, tf.newaxis, tf.newaxis, :]
         x = (x_plus - x_minus) * 0.5  # residuals, logits
         x = self.prenorm1_layer(x, training=training)

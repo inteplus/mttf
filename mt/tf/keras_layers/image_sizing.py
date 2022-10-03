@@ -458,7 +458,7 @@ class Downsize2D_V2(tf.keras.layers.Layer):
             self._input_dim,
             self._kernel_size,
             padding="same",
-            activation="tanh",  # output range (-1., 1.)
+            activation=None,  # logits
             kernel_initializer=self._kernel_initializer,
             bias_initializer=self._bias_initializer,
             kernel_regularizer=self._kernel_regularizer,
@@ -498,9 +498,11 @@ class Downsize2D_V2(tf.keras.layers.Layer):
         x = self.expansion_layer(x, training=training)
         x = self.prenorm2_layer(x, training=training)
         x = self.projection_layer(x, training=training)
+        x_avg = tf.asigmoid(x_avg)
         x = tf.concat(
             [x_avg + x, x_avg - x], axis=3
-        )  # to make the channels homogeneous, although new range (-1., 2.)
+        )  # to make the channels homogeneous
+        x = tf.sigmoid(x)
 
         return x
 
@@ -639,7 +641,7 @@ class Upsize2D_V2(tf.keras.layers.Layer):
             self._input_dim * 2,
             self._kernel_size,
             padding="same",
-            activation="tanh",  # output range (-1., 1.)
+            activation=None,  # logits
             kernel_initializer=self._kernel_initializer,
             bias_initializer=self._bias_initializer,
             kernel_regularizer=self._kernel_regularizer,
@@ -650,11 +652,13 @@ class Upsize2D_V2(tf.keras.layers.Layer):
         )
 
     def call(self, x, training: bool = False):
+        x = tf.asigmoid(x)
         x_plus = x[:, :, :, : self._input_dim // 2]
         x_minus = x[:, :, :, self._input_dim // 2 :]
-        x_avg = (x_plus + x_minus) * 0.5  # means, expected range (0., 1.)
+        x_avg = (x_plus + x_minus) * 0.5  # means, logits
+        x_avg = tf.sigmoid(x_avg)  # range (0., 1.)
         x_avg = x_avg[:, :, :, tf.newaxis, tf.newaxis, :]
-        x = (x_plus - x_minus) * 0.5  # residuals, expected range (-1., 1.)
+        x = (x_plus - x_minus) * 0.5  # residuals, logits
         x = self.prenorm1_layer(x, training=training)
         x = self.expansion_layer(x, training=training)
         x = self.prenorm2_layer(x, training=training)

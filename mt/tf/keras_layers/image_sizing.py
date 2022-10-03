@@ -4,8 +4,6 @@ import typing as tp
 
 import tensorflow as tf
 
-from ..utils import asigmoid
-
 
 __all__ = [
     "Downsize2D",
@@ -13,16 +11,6 @@ __all__ = [
     "Downsize2D_V2",
     "Upsize2D_V2",
 ]
-
-
-def asig2(y):  # input (0., 1.)
-    y = y * 0.998 + 0.001  # (0.001, 0.999)
-    return asigmoid(y)  # (-6.9, +6.9)
-
-
-def sig2(x):  # input (-6.9, +6.9)
-    y = tf.sigmoid(x)  # (0.001, 0.999)
-    return (y - 0.001) / 0.998  # (0., 1.)
 
 
 class Downsize2D(tf.keras.layers.Layer):
@@ -470,7 +458,7 @@ class Downsize2D_V2(tf.keras.layers.Layer):
             self._input_dim,
             self._kernel_size,
             padding="same",
-            activation=None,  # logits
+            activation="tanh",  # (-1, 1)
             kernel_initializer=self._kernel_initializer,
             bias_initializer=self._bias_initializer,
             kernel_regularizer=self._kernel_regularizer,
@@ -510,11 +498,13 @@ class Downsize2D_V2(tf.keras.layers.Layer):
         x = self.expansion_layer(x, training=training)
         x = self.prenorm2_layer(x, training=training)
         x = self.projection_layer(x, training=training)
-        x_avg = asig2(x_avg)
+
+        # mix x_avg (0., 1.) and x (-1., 1.)
+        x_avg = x_avg * 0.5 + 0.25  # (0.25, 0.75)
+        x = x * 0.25  # (-0.25, 0.25)
         x = tf.concat(
             [x_avg + x, x_avg - x], axis=3
         )  # to make the channels homogeneous
-        x = sig2(x)
 
         return x
 
@@ -664,13 +654,13 @@ class Upsize2D_V2(tf.keras.layers.Layer):
         )
 
     def call(self, x, training: bool = False):
-        x = asig2(x)
+        # unmix x_avg (0., 1.) and x (-1., 1.)
         x_plus = x[:, :, :, : self._input_dim // 2]
         x_minus = x[:, :, :, self._input_dim // 2 :]
-        x_avg = (x_plus + x_minus) * 0.5  # means, logits
-        x_avg = sig2(x_avg)  # range (0., 1.)
+        x_avg = x_plus + x_minus - 0.5  # means, (0., 1.)
         x_avg = x_avg[:, :, :, tf.newaxis, tf.newaxis, :]
-        x = (x_plus - x_minus) * 0.5  # residuals, logits
+        x = (x_plus - x_minus) * 2  # residuals, (-1., 1.)
+
         x = self.prenorm1_layer(x, training=training)
         x = self.expansion_layer(x, training=training)
         x = self.prenorm2_layer(x, training=training)

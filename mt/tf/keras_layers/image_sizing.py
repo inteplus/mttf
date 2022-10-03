@@ -21,7 +21,7 @@ def asig2(y):  # input (0., 1.)
 
 
 def sig2(x):  # input (-6.9, +6.9)
-    y = sigmoid(x)  # (0.001, 0.999)
+    y = tf.sigmoid(x)  # (0.001, 0.999)
     return (y - 0.001) / 0.998  # (0., 1.)
 
 

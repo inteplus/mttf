@@ -643,7 +643,7 @@ class Upsize2D_V2(tf.keras.layers.Layer):
             self._input_dim * 2,
             self._kernel_size,
             padding="same",
-            activation=None,  # logits
+            activation="tanh",  # (-1., 1.)
             kernel_initializer=self._kernel_initializer,
             bias_initializer=self._bias_initializer,
             kernel_regularizer=self._kernel_regularizer,

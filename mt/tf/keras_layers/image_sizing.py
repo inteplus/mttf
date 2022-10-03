@@ -4,6 +4,8 @@ import typing as tp
 
 import tensorflow as tf
 
+from ..utils import asigmoid
+
 
 __all__ = [
     "Downsize2D",
@@ -498,7 +500,7 @@ class Downsize2D_V2(tf.keras.layers.Layer):
         x = self.expansion_layer(x, training=training)
         x = self.prenorm2_layer(x, training=training)
         x = self.projection_layer(x, training=training)
-        x_avg = tf.asigmoid(x_avg)
+        x_avg = asigmoid(x_avg)
         x = tf.concat(
             [x_avg + x, x_avg - x], axis=3
         )  # to make the channels homogeneous
@@ -652,7 +654,7 @@ class Upsize2D_V2(tf.keras.layers.Layer):
         )
 
     def call(self, x, training: bool = False):
-        x = tf.asigmoid(x)
+        x = asigmoid(x)
         x_plus = x[:, :, :, : self._input_dim // 2]
         x_minus = x[:, :, :, self._input_dim // 2 :]
         x_avg = (x_plus + x_minus) * 0.5  # means, logits

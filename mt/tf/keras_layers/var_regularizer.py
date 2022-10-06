@@ -32,7 +32,7 @@ class VarianceRegularizer(tf.keras.layers.Layer):
             "rate": self.rate,
             "l_axes": self.l_axes,
         }
-        base_config = super(Upsize2D, self).get_config()
+        base_config = super(VarianceRegularizer, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
     get_config.__doc__ = tf.keras.layers.Layer.get_config.__doc__

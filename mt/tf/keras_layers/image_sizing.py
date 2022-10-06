@@ -8,8 +8,6 @@ import tensorflow as tf
 __all__ = [
     "Downsize2D",
     "Upsize2D",
-    "Downsize2D_V2",
-    "Upsize2D_V2",
 ]
 
 

@@ -17,10 +17,10 @@ class VarianceRegularizer(tf.keras.layers.Layer):
         self.l_axes = l_axes
 
     def call(self, x):
-        mean = tf.reduce_mean(x, axis=l_axes, keepdims=True)
+        mean = tf.reduce_mean(x, axis=self.l_axes, keepdims=True)
         err = x - mean
         esq = err * err
-        var = tf.reduce_mean(esq, axis=l_axes)
+        var = tf.reduce_mean(esq, axis=self.l_axes)
         sum_var = tf.reduce_sum(var)
         self.add_loss(self.rate * sum_var)
         return x

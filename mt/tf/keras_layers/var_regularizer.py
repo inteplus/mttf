@@ -11,8 +11,8 @@ class VarianceRegularizer(tf.keras.layers.Layer):
     Negative rate for making the variance larger. Positive rate for making the variance smaller.
     """
 
-    def __init__(self, rate=1e-2, l_axes: list = [-1]):
-        super(VarianceRegularizer, self).__init__()
+    def __init__(self, rate=1e-2, l_axes: list = [-1], **kwargs):
+        super(VarianceRegularizer, self).__init__(**kwargs)
         self.rate = rate
         self.l_axes = l_axes
 

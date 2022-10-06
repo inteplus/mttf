@@ -4,6 +4,8 @@ import typing as tp
 
 import tensorflow as tf
 
+from .var_regularizer import VarianceRegularizer
+
 
 __all__ = [
     "Downsize2D",
@@ -39,6 +41,8 @@ class Downsize2D(tf.keras.layers.Layer):
         Contraint function applied to the convolutional layer kernels.
     bias_constraint: object
         Contraint function applied to the convolutional layer biases.
+    tanh_reg_rate : float
+        rate for the tanh activation regularizer. Only valid if negative.
     """
 
     def __init__(
@@ -52,6 +56,7 @@ class Downsize2D(tf.keras.layers.Layer):
         bias_regularizer=None,
         kernel_constraint=None,
         bias_constraint=None,
+        tanh_reg_rate: float = 0.0,
         **kwargs
     ):
         super(Downsize2D, self).__init__(**kwargs)
@@ -65,6 +70,7 @@ class Downsize2D(tf.keras.layers.Layer):
         self._bias_regularizer = tf.keras.regularizers.get(bias_regularizer)
         self._kernel_constraint = tf.keras.constraints.get(kernel_constraint)
         self._bias_constraint = tf.keras.constraints.get(bias_constraint)
+        self._tanh_reg_rate = tanh_reg_rate
 
         self.prenorm1_layer = tf.keras.layers.LayerNormalization(name="prenorm1")
         self.expansion_layer = tf.keras.layers.Conv2D(
@@ -94,6 +100,12 @@ class Downsize2D(tf.keras.layers.Layer):
             bias_constraint=self._bias_constraint,
             name="project",
         )
+        if tanh_reg_rate < 0:
+            self.tanh_reg_layer = VarianceRegularizer(
+                rate=tanh_reg_rate, l_axes=[0, 1, 2], name="tanh_reg"
+            )
+        else:
+            self.tanh_reg_layer = None
 
     def call(self, x, training: bool = False):
         input_shape = tf.shape(x)
@@ -125,6 +137,8 @@ class Downsize2D(tf.keras.layers.Layer):
         x = self.expansion_layer(x, training=training)
         x = self.prenorm2_layer(x, training=training)
         x = self.projection_layer(x, training=training)
+        if self.tanh_reg_layer is not None:
+            x = self.tanh_reg_layer(x, training=training)
 
         # mix x_avg (0., 1.) and x (-1., 1.)
         x_avg = x_avg * 0.5 + 0.25  # (0.25, 0.75)
@@ -184,6 +198,7 @@ class Downsize2D(tf.keras.layers.Layer):
                 self._kernel_constraint
             ),
             "bias_constraint": tf.keras.constraints.serialize(self._bias_constraint),
+            "tanh_reg_rate": self._tanh_reg_rate,
         }
         base_config = super(Downsize2D, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))

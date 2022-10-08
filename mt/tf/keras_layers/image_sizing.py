@@ -2,6 +2,7 @@
 
 import typing as tp
 
+import numpy as np
 import tensorflow as tf
 
 
@@ -11,6 +12,28 @@ __all__ = [
     "Upsize2D_V2",
     "Downsize2D_V2",
 ]
+
+
+def mirror_all_weights(l_weights: list) -> list:
+    """TBC"""
+
+    l_newWeights = []
+    for arr in l_weights:
+        if arr.ndim == 1:
+            new_arr = np.tile(arr, 2)
+        elif arr.ndim == 4:
+            zero_arr = np.zeros_like(arr, dtype=arr.dtype)
+            x = np.stack([arr, zero_arr, zero_arr, arr], axis=-1)
+            x = x.reshape(arr.shape + (2, 2))
+            x = np.transpose(x, [0, 1, 4, 2, 5, 3])
+            new_arr = x.reshape(
+                (arr.shape[0], arr.shape[1], arr.shape[2] << 1, arr.shape[3] << 1)
+            )
+        else:
+            raise NotImplementedError("SOTA exceeded!")
+        l_newWeights.append(new_arr)
+
+    return l_newWeights
 
 
 class Upsize2D(tf.keras.layers.Layer):
@@ -198,6 +221,9 @@ class Upsize2D(tf.keras.layers.Layer):
 
     get_config.__doc__ = tf.keras.layers.Layer.get_config.__doc__
 
+    def get_mirrored_weights(self):
+        return mirror_all_weights(self.get_weights())
+
 
 class Downsize2D(tf.keras.layers.Layer):
     """Downsizing along the x-axis and the y-axis using convolutions of residuals.
@@ -384,6 +410,9 @@ class Downsize2D(tf.keras.layers.Layer):
         return dict(list(base_config.items()) + list(config.items()))
 
     get_config.__doc__ = tf.keras.layers.Layer.get_config.__doc__
+
+    def get_mirrored_weights(self):
+        return mirror_all_weights(self.get_weights())
 
 
 # backward compatibility

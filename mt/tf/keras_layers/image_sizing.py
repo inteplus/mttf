@@ -501,7 +501,7 @@ class Downsize2D_V2(tf.keras.layers.Layer):
         self.prenorm2_layer = tf.keras.layers.LayerNormalization(name="prenorm2")
         self.projection_layer = tf.keras.layers.Conv2D(
             self._img_dim + self._res_dim * 2,
-            self._kernel_size,
+            1,
             padding="same",
             activation="sigmoid",  # (0., 1.)
             kernel_initializer=self._kernel_initializer,
@@ -525,7 +525,7 @@ class Downsize2D_V2(tf.keras.layers.Layer):
 
         # extract average over the image dimensions
         x_avg = tf.reduce_mean(x[:, :, :, :, :, :I], axis=[2, 4], keepdims=True)
-        zeros = tf.zeros([B, H, 2, W, 2, R])
+        zeros = tf.zeros([B, H, 1, W, 1, R])
         x -= tf.concat([x_avg, zeros], axis=5)  # residuals
         x_avg = x_avg[:, :, 0, :, 0, :]  # means
 
@@ -697,7 +697,7 @@ class Upsize2D_V2(tf.keras.layers.Layer):
         self.prenorm2_layer = tf.keras.layers.LayerNormalization(name="prenorm2")
         self.projection_layer = tf.keras.layers.Conv2D(
             (self._img_dim + self._res_dim) * 2,
-            self._kernel_size,
+            self._kernel_size if self._expansion_factor <= 1 else 1,
             padding="same",
             activation="tanh",  # (-1., 1.)
             kernel_initializer=self._kernel_initializer,

@@ -454,6 +454,8 @@ class Downsize2D_V2(tf.keras.layers.Layer):
         Contraint function applied to the convolutional layer kernels.
     bias_constraint: object
         Contraint function applied to the convolutional layer biases.
+    projection_uses_bias : bool
+        whether or not the projection convolution layer uses a bias vector
     """
 
     def __init__(
@@ -468,6 +470,7 @@ class Downsize2D_V2(tf.keras.layers.Layer):
         bias_regularizer=None,
         kernel_constraint=None,
         bias_constraint=None,
+        projection_uses_bias: bool = True,
         **kwargs
     ):
         super(Downsize2D_V2, self).__init__(**kwargs)
@@ -482,6 +485,7 @@ class Downsize2D_V2(tf.keras.layers.Layer):
         self._bias_regularizer = tf.keras.regularizers.get(bias_regularizer)
         self._kernel_constraint = tf.keras.constraints.get(kernel_constraint)
         self._bias_constraint = tf.keras.constraints.get(bias_constraint)
+        self._projection_uses_bias = projection_uses_bias
 
         if self._expansion_factor > 1:
             self.prenorm1_layer = tf.keras.layers.LayerNormalization(name="prenorm1")
@@ -504,6 +508,7 @@ class Downsize2D_V2(tf.keras.layers.Layer):
             1,
             padding="same",
             activation="sigmoid",  # (0., 1.)
+            use_bias=self._projection_uses_bias,
             kernel_initializer=self._kernel_initializer,
             bias_initializer=self._bias_initializer,
             kernel_regularizer=self._kernel_regularizer,
@@ -598,6 +603,7 @@ class Downsize2D_V2(tf.keras.layers.Layer):
                 self._kernel_constraint
             ),
             "bias_constraint": tf.keras.constraints.serialize(self._bias_constraint),
+            "projection_uses_bias": self._projection_uses_bias,
         }
         base_config = super(Downsize2D_V2, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))

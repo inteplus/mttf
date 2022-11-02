@@ -7,6 +7,7 @@ import tensorflow as tf
 
 
 __all__ = [
+    "DUCLayer",
     "Downsize2D",
     "Upsize2D",
     "Downsize2D_V2",
@@ -36,7 +37,77 @@ def mirror_all_weights(l_weights: list) -> list:
     return l_newWeights
 
 
-class Upsize2D(tf.keras.layers.Layer):
+class DUCLayer(tf.keras.layers.Layer):
+    """TBC
+
+    Parameters
+    ----------
+    kernel_size : int or tuple or list
+        An integer or tuple/list of 2 integers, specifying the height and width of the 2D
+        convolution window. Can be a single integer to specify the same value for all spatial
+        dimensions.
+    kernel_initializer : object
+        Initializer for the convolutional kernels.
+    bias_initializer : object
+        Initializer for the convolutional biases.
+    kernel_regularizer : object
+        Regularizer for the convolutional kernels.
+    bias_regularizer : object
+        Regularizer for the convolutional biases.
+    kernel_constraint: object
+        Contraint function applied to the convolutional layer kernels.
+    bias_constraint: object
+        Contraint function applied to the convolutional layer biases.
+    """
+
+    def __init__(
+        self,
+        kernel_size: tp.Union[int, tuple, list] = 3,
+        kernel_initializer="glorot_uniform",
+        bias_initializer="zeros",
+        kernel_regularizer=None,
+        bias_regularizer=None,
+        kernel_constraint=None,
+        bias_constraint=None,
+        **kwargs
+    ):
+
+        super(DUCLayer, self).__init__(**kwargs)
+
+        self._kernel_size = kernel_size
+        self._kernel_initializer = tf.keras.initializers.get(kernel_initializer)
+        self._bias_initializer = tf.keras.initializers.get(bias_initializer)
+        self._kernel_regularizer = tf.keras.regularizers.get(kernel_regularizer)
+        self._bias_regularizer = tf.keras.regularizers.get(bias_regularizer)
+        self._kernel_constraint = tf.keras.constraints.get(kernel_constraint)
+        self._bias_constraint = tf.keras.constraints.get(bias_constraint)
+
+    def get_config(self):
+        config = {
+            "kernel_size": self._kernel_size,
+            "kernel_initializer": tf.keras.initializers.serialize(
+                self._kernel_initializer
+            ),
+            "bias_initializer": tf.keras.initializers.serialize(self._bias_initializer),
+            "kernel_regularizer": tf.keras.regularizers.serialize(
+                self._kernel_regularizer
+            ),
+            "bias_regularizer": tf.keras.regularizers.serialize(self._bias_regularizer),
+            "kernel_constraint": tf.keras.constraints.serialize(
+                self._kernel_constraint
+            ),
+            "bias_constraint": tf.keras.constraints.serialize(self._bias_constraint),
+        }
+        base_config = super(DUCLayer, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
+
+    get_config.__doc__ = tf.keras.layers.Layer.get_config.__doc__
+
+    def get_mirrored_weights(self):
+        return mirror_all_weights(self.get_weights())
+
+
+class Upsize2D(DUCLayer):
     """Upsizing along the x-axis and the y-axis using convolutions of residuals.
 
     Upsizing means doubling the width and the height and halving the number of channels.
@@ -85,7 +156,16 @@ class Upsize2D(tf.keras.layers.Layer):
         bias_constraint=None,
         **kwargs
     ):
-        super(Upsize2D, self).__init__(**kwargs)
+        super(Upsize2D, self).__init__(
+            kernel_size=kernel_size,
+            kernel_initializer=kernel_initializer,
+            bias_initializer=bias_initializer,
+            kernel_regularizer=kernel_regularizer,
+            bias_regularizer=bias_regularizer,
+            kernel_constraint=kernel_constraint,
+            bias_constraint=bias_constraint,
+            **kwargs
+        )
 
         if input_dim & 1 != 0:
             raise ValueError(
@@ -94,13 +174,6 @@ class Upsize2D(tf.keras.layers.Layer):
 
         self._input_dim = input_dim
         self._expansion_factor = expansion_factor
-        self._kernel_size = kernel_size
-        self._kernel_initializer = tf.keras.initializers.get(kernel_initializer)
-        self._bias_initializer = tf.keras.initializers.get(bias_initializer)
-        self._kernel_regularizer = tf.keras.regularizers.get(kernel_regularizer)
-        self._bias_regularizer = tf.keras.regularizers.get(bias_regularizer)
-        self._kernel_constraint = tf.keras.constraints.get(kernel_constraint)
-        self._bias_constraint = tf.keras.constraints.get(bias_constraint)
 
         if self._expansion_factor > 1:
             self.prenorm1_layer = tf.keras.layers.LayerNormalization(name="prenorm1")
@@ -174,7 +247,7 @@ class Upsize2D(tf.keras.layers.Layer):
 
         return x
 
-    call.__doc__ = tf.keras.layers.Layer.call.__doc__
+    call.__doc__ = DUCLayer.call.__doc__
 
     def compute_output_shape(self, input_shape):
         if len(input_shape) != 4:
@@ -197,36 +270,20 @@ class Upsize2D(tf.keras.layers.Layer):
         )
         return output_shape
 
-    compute_output_shape.__doc__ = tf.keras.layers.Layer.compute_output_shape.__doc__
+    compute_output_shape.__doc__ = DUCLayer.compute_output_shape.__doc__
 
     def get_config(self):
         config = {
             "input_dim": self._input_dim,
             "expansion_factor": self._expansion_factor,
-            "kernel_size": self._kernel_size,
-            "kernel_initializer": tf.keras.initializers.serialize(
-                self._kernel_initializer
-            ),
-            "bias_initializer": tf.keras.initializers.serialize(self._bias_initializer),
-            "kernel_regularizer": tf.keras.regularizers.serialize(
-                self._kernel_regularizer
-            ),
-            "bias_regularizer": tf.keras.regularizers.serialize(self._bias_regularizer),
-            "kernel_constraint": tf.keras.constraints.serialize(
-                self._kernel_constraint
-            ),
-            "bias_constraint": tf.keras.constraints.serialize(self._bias_constraint),
         }
         base_config = super(Upsize2D, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
-    get_config.__doc__ = tf.keras.layers.Layer.get_config.__doc__
-
-    def get_mirrored_weights(self):
-        return mirror_all_weights(self.get_weights())
+    get_config.__doc__ = DUCLayer.get_config.__doc__
 
 
-class Downsize2D(tf.keras.layers.Layer):
+class Downsize2D(DUCLayer):
     """Downsizing along the x-axis and the y-axis using convolutions of residuals.
 
     Downsizing means halving the width and the height and doubling the number of channels.
@@ -270,17 +327,19 @@ class Downsize2D(tf.keras.layers.Layer):
         bias_constraint=None,
         **kwargs
     ):
-        super(Downsize2D, self).__init__(**kwargs)
+        super(Downsize2D, self).__init__(
+            kernel_size=kernel_size,
+            kernel_initializer=kernel_initializer,
+            bias_initializer=bias_initializer,
+            kernel_regularizer=kernel_regularizer,
+            bias_regularizer=bias_regularizer,
+            kernel_constraint=kernel_constraint,
+            bias_constraint=bias_constraint,
+            **kwargs
+        )
 
         self._input_dim = input_dim
         self._expansion_factor = expansion_factor
-        self._kernel_size = kernel_size
-        self._kernel_initializer = tf.keras.initializers.get(kernel_initializer)
-        self._bias_initializer = tf.keras.initializers.get(bias_initializer)
-        self._kernel_regularizer = tf.keras.regularizers.get(kernel_regularizer)
-        self._bias_regularizer = tf.keras.regularizers.get(bias_regularizer)
-        self._kernel_constraint = tf.keras.constraints.get(kernel_constraint)
-        self._bias_constraint = tf.keras.constraints.get(bias_constraint)
 
         if self._expansion_factor > 1:
             self.prenorm1_layer = tf.keras.layers.LayerNormalization(name="prenorm1")
@@ -359,7 +418,7 @@ class Downsize2D(tf.keras.layers.Layer):
 
         return x
 
-    call.__doc__ = tf.keras.layers.Layer.call.__doc__
+    call.__doc__ = DUCLayer.call.__doc__
 
     def compute_output_shape(self, input_shape):
         if len(input_shape) != 4:
@@ -389,39 +448,23 @@ class Downsize2D(tf.keras.layers.Layer):
 
         return output_shape
 
-    compute_output_shape.__doc__ = tf.keras.layers.Layer.compute_output_shape.__doc__
+    compute_output_shape.__doc__ = DUCLayer.compute_output_shape.__doc__
 
     def get_config(self):
         config = {
             "input_dim": self._input_dim,
             "expansion_factor": self._expansion_factor,
-            "kernel_size": self._kernel_size,
-            "kernel_initializer": tf.keras.initializers.serialize(
-                self._kernel_initializer
-            ),
-            "bias_initializer": tf.keras.initializers.serialize(self._bias_initializer),
-            "kernel_regularizer": tf.keras.regularizers.serialize(
-                self._kernel_regularizer
-            ),
-            "bias_regularizer": tf.keras.regularizers.serialize(self._bias_regularizer),
-            "kernel_constraint": tf.keras.constraints.serialize(
-                self._kernel_constraint
-            ),
-            "bias_constraint": tf.keras.constraints.serialize(self._bias_constraint),
         }
         base_config = super(Downsize2D, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
-    get_config.__doc__ = tf.keras.layers.Layer.get_config.__doc__
-
-    def get_mirrored_weights(self):
-        return mirror_all_weights(self.get_weights())
+    get_config.__doc__ = DUCLayer.get_config.__doc__
 
 
 # ----- new -----
 
 
-class Downsize2D_V2(tf.keras.layers.Layer):
+class Downsize2D_V2(DUCLayer):
     """Downsizing along the x-axis and the y-axis using convolutions of residuals.
 
     Downsizing means halving the width and the height and doubling the number of channels.
@@ -473,18 +516,20 @@ class Downsize2D_V2(tf.keras.layers.Layer):
         projection_uses_bias: bool = True,
         **kwargs
     ):
-        super(Downsize2D_V2, self).__init__(**kwargs)
+        super(Downsize2D_V2, self).__init__(
+            kernel_size=kernel_size,
+            kernel_initializer=kernel_initializer,
+            bias_initializer=bias_initializer,
+            kernel_regularizer=kernel_regularizer,
+            bias_regularizer=bias_regularizer,
+            kernel_constraint=kernel_constraint,
+            bias_constraint=bias_constraint,
+            **kwargs
+        )
 
         self._img_dim = img_dim
         self._res_dim = res_dim
         self._expansion_factor = expansion_factor
-        self._kernel_size = kernel_size
-        self._kernel_initializer = tf.keras.initializers.get(kernel_initializer)
-        self._bias_initializer = tf.keras.initializers.get(bias_initializer)
-        self._kernel_regularizer = tf.keras.regularizers.get(kernel_regularizer)
-        self._bias_regularizer = tf.keras.regularizers.get(bias_regularizer)
-        self._kernel_constraint = tf.keras.constraints.get(kernel_constraint)
-        self._bias_constraint = tf.keras.constraints.get(bias_constraint)
         self._projection_uses_bias = projection_uses_bias
 
         if self._expansion_factor > 1:
@@ -553,7 +598,7 @@ class Downsize2D_V2(tf.keras.layers.Layer):
 
         return x
 
-    call.__doc__ = tf.keras.layers.Layer.call.__doc__
+    call.__doc__ = DUCLayer.call.__doc__
 
     def compute_output_shape(self, input_shape):
         if len(input_shape) != 4:
@@ -583,35 +628,22 @@ class Downsize2D_V2(tf.keras.layers.Layer):
 
         return output_shape
 
-    compute_output_shape.__doc__ = tf.keras.layers.Layer.compute_output_shape.__doc__
+    compute_output_shape.__doc__ = DUCLayer.compute_output_shape.__doc__
 
     def get_config(self):
         config = {
             "img_dim": self._img_dim,
             "res_dim": self._res_dim,
             "expansion_factor": self._expansion_factor,
-            "kernel_size": self._kernel_size,
-            "kernel_initializer": tf.keras.initializers.serialize(
-                self._kernel_initializer
-            ),
-            "bias_initializer": tf.keras.initializers.serialize(self._bias_initializer),
-            "kernel_regularizer": tf.keras.regularizers.serialize(
-                self._kernel_regularizer
-            ),
-            "bias_regularizer": tf.keras.regularizers.serialize(self._bias_regularizer),
-            "kernel_constraint": tf.keras.constraints.serialize(
-                self._kernel_constraint
-            ),
-            "bias_constraint": tf.keras.constraints.serialize(self._bias_constraint),
             "projection_uses_bias": self._projection_uses_bias,
         }
         base_config = super(Downsize2D_V2, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
-    get_config.__doc__ = tf.keras.layers.Layer.get_config.__doc__
+    get_config.__doc__ = DUCLayer.get_config.__doc__
 
 
-class Upsize2D_V2(tf.keras.layers.Layer):
+class Upsize2D_V2(DUCLayer):
     """Upsizing along the x-axis and the y-axis using convolutions of residuals.
 
     Upsizing means doubling the width and the height and halving the number of channels.
@@ -666,7 +698,16 @@ class Upsize2D_V2(tf.keras.layers.Layer):
         bias_constraint=None,
         **kwargs
     ):
-        super(Upsize2D_V2, self).__init__(**kwargs)
+        super(Upsize2D_V2, self).__init__(
+            kernel_size=kernel_size,
+            kernel_initializer=kernel_initializer,
+            bias_initializer=bias_initializer,
+            kernel_regularizer=kernel_regularizer,
+            bias_regularizer=bias_regularizer,
+            kernel_constraint=kernel_constraint,
+            bias_constraint=bias_constraint,
+            **kwargs
+        )
 
         input_dim = img_dim + res_dim
         if input_dim & 1 != 0:
@@ -677,13 +718,6 @@ class Upsize2D_V2(tf.keras.layers.Layer):
         self._img_dim = img_dim
         self._res_dim = res_dim
         self._expansion_factor = expansion_factor
-        self._kernel_size = kernel_size
-        self._kernel_initializer = tf.keras.initializers.get(kernel_initializer)
-        self._bias_initializer = tf.keras.initializers.get(bias_initializer)
-        self._kernel_regularizer = tf.keras.regularizers.get(kernel_regularizer)
-        self._bias_regularizer = tf.keras.regularizers.get(bias_regularizer)
-        self._kernel_constraint = tf.keras.constraints.get(kernel_constraint)
-        self._bias_constraint = tf.keras.constraints.get(bias_constraint)
 
         if self._expansion_factor > 1:
             self.prenorm1_layer = tf.keras.layers.LayerNormalization(name="prenorm1")
@@ -747,7 +781,7 @@ class Upsize2D_V2(tf.keras.layers.Layer):
 
         return x
 
-    call.__doc__ = tf.keras.layers.Layer.call.__doc__
+    call.__doc__ = DUCLayer.call.__doc__
 
     def compute_output_shape(self, input_shape):
         if len(input_shape) != 4:
@@ -770,28 +804,15 @@ class Upsize2D_V2(tf.keras.layers.Layer):
         )
         return output_shape
 
-    compute_output_shape.__doc__ = tf.keras.layers.Layer.compute_output_shape.__doc__
+    compute_output_shape.__doc__ = DUCLayer.compute_output_shape.__doc__
 
     def get_config(self):
         config = {
             "img_dim": self._img_dim,
             "res_dim": self._res_dim,
             "expansion_factor": self._expansion_factor,
-            "kernel_size": self._kernel_size,
-            "kernel_initializer": tf.keras.initializers.serialize(
-                self._kernel_initializer
-            ),
-            "bias_initializer": tf.keras.initializers.serialize(self._bias_initializer),
-            "kernel_regularizer": tf.keras.regularizers.serialize(
-                self._kernel_regularizer
-            ),
-            "bias_regularizer": tf.keras.regularizers.serialize(self._bias_regularizer),
-            "kernel_constraint": tf.keras.constraints.serialize(
-                self._kernel_constraint
-            ),
-            "bias_constraint": tf.keras.constraints.serialize(self._bias_constraint),
         }
         base_config = super(Upsize2D_V2, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
-    get_config.__doc__ = tf.keras.layers.Layer.get_config.__doc__
+    get_config.__doc__ = DUCLayer.get_config.__doc__

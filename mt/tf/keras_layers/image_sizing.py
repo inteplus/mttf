@@ -885,7 +885,7 @@ class Downsize2D_V3(DUCLayer):
         self._res_dim = res_dim
 
         if res_dim > 0:
-        self.prenorm1_layer = tf.keras.layers.LayerNormalization(name="prenorm1")
+            self.prenorm1_layer = tf.keras.layers.LayerNormalization(name="prenorm1")
             self.mixing_layer = tf.keras.layers.Conv2D(
                 img_dim + res_dim,
                 self._kernel_size,
@@ -899,20 +899,20 @@ class Downsize2D_V3(DUCLayer):
                 bias_constraint=self._bias_constraint,
                 name="mix",
             )
-            self.prenorm2_layer = tf.keras.layers.LayerNormalization(name="prenorm2")
-            self.projection_layer = tf.keras.layers.Conv2D(
-                img_dim + res_dim * 2,
-                1,
-                padding="same",
-                activation="sigmoid",  # (0., 1.)
-                kernel_initializer=self._kernel_initializer,
-                bias_initializer=self._bias_initializer,
-                kernel_regularizer=self._kernel_regularizer,
-                bias_regularizer=self._bias_regularizer,
-                kernel_constraint=self._kernel_constraint,
-                bias_constraint=self._bias_constraint,
-                name="project",
-            )
+        self.prenorm2_layer = tf.keras.layers.LayerNormalization(name="prenorm2")
+        self.projection_layer = tf.keras.layers.Conv2D(
+            img_dim + res_dim * 2,
+            1,
+            padding="same",
+            activation="sigmoid",  # (0., 1.)
+            kernel_initializer=self._kernel_initializer,
+            bias_initializer=self._bias_initializer,
+            kernel_regularizer=self._kernel_regularizer,
+            bias_regularizer=self._bias_regularizer,
+            kernel_constraint=self._kernel_constraint,
+            bias_constraint=self._bias_constraint,
+            name="project",
+        )
 
     def call(self, x, training: bool = False):
         # shape

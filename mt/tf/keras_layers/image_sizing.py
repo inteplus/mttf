@@ -930,7 +930,7 @@ class Downsize2D_V3(DUCLayer):
         x_avg = (xl + xr) * 0.5  # shape = [B, H * 2, W, I]
         x_res = xl - xr  # shape = [B, H * 2, W, I]
         if R > 0:
-            x = tf.concat([x_avg, x_res, x[:, :, :, 0, I:], x[:, :, 0, 1, I:]], axis=3)
+            x = tf.concat([x_avg, x_res, x[:, :, :, 0, I:], x[:, :, :, 1, I:]], axis=3)
             x = self.prenorm1_layer(x, training=training)
             x = self.mixing_layer(x, training=training)  # shape = [B, H * 2, W, I + R]
         else:

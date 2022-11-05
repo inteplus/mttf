@@ -38,7 +38,7 @@ def mirror_all_weights(l_weights: list) -> list:
 
 
 class DUCLayer(tf.keras.layers.Layer):
-    """TBC
+    """Base layer for all DUC layer implementations.
 
     Parameters
     ----------

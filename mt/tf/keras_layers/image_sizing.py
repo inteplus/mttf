@@ -935,15 +935,15 @@ class Downsize2D_V3(DUCLayer):
             x = self.mixing_layer(x, training=training)  # shape = [B, H * 2, W, I + R]
         else:
             x = x_res
-        x = tf.concat([x_avg, x], axis=3)  # shape = [B, H * 2, W, I + I + R]
+        x_avg = tf.reshape(x_avg, [B, H, 2, W, I])
+        x = tf.reshape(x, [B, H, 2, W, I + R])
 
         # merge pairs of consecutive pixels in each column
-        x = tf.reshape(x, [B, H, 2, W, I + I + R])
-        xt = x[:, :, 0, :, :I]
-        xb = x[:, :, 1, :, :I]
+        xt = x_avg[:, :, 0, :, :]
+        xb = x_avg[:, :, 1, :, :]
         x_avg = (xt + xb) * 0.5  # shape = [B, H, W, I]
         x_res = xt - xb  # shape = [B, H, W, I]
-        x = tf.concat([x_avg, x_res, x[:, :, 0, :, I:], x[:, :, 1, :, I:]], axis=3)
+        x = tf.concat([x_avg, x_res, x[:, :, 0, :, :], x[:, :, 1, :, :]], axis=3)
         x = self.prenorm2_layer(x, training=training)
         x = self.projection_layer(x, training=training)  # shape = [B, H, W, I + 2 * R]
         x = tf.concat([x_avg, x], axis=3)  # shape = [B, H, W, 2 * (I + R)]

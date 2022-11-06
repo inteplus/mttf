@@ -1061,7 +1061,7 @@ class Downsize2D_V4(DUCLayer):
         self._res_dim = res_dim
 
         if res_dim > 0:
-            if res_dim > 1:
+            if res_dim > img_dim:
                 self.prenorm1_layer = tf.keras.layers.LayerNormalization(
                     name="prenorm1"
                 )
@@ -1138,7 +1138,7 @@ class Downsize2D_V4(DUCLayer):
         x_res = xl - xr  # shape = [B, H * 2, W, I]
         if R > 0:
             x = tf.concat([x_avg, x_res, x[:, :, :, 0, I:], x[:, :, :, 1, I:]], axis=3)
-            if R > 1:
+            if R > I:
                 x = self.prenorm1_layer(x, training=training)
                 x = self.expand1_layer(
                     x, training=training

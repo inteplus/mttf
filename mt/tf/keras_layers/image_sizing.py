@@ -1145,16 +1145,14 @@ class Downsize2D_V4(DUCLayer):
                 x = self.expand1_layer(
                     x, training=training
                 )  # shape = [B, H * 2, W, I * 2 + R * 4]
-            RR = (I + R * 3 + 1) // 2
             x = self.prenorm2_layer(x, training=training)
             x = self.project1_layer(x, training=training)  # shape = [B, H*2, W, RR]
-            x_avg = tf.reshape(x_avg, [B, H, 2, W, I])
-            x = tf.reshape(x, [B, H, 2, W, RR])
+            RR = (I + R * 3 + 1) // 2
         else:
             x = x_res
-            x_avg = tf.reshape(x_avg, [B, H, 2, W, I])
-            x = tf.reshape(x, [B, H, 2, W, I])
             RR = I
+        x_avg = tf.reshape(x_avg, [B, H, 2, W, I])
+        x = tf.reshape(x, [B, H, 2, W, RR])
 
         # merge pairs of consecutive pixels in each column
         xt = x_avg[:, :, 0, :, :]

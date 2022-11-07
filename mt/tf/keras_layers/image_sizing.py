@@ -1078,9 +1078,10 @@ class Downsize2D_V4(DUCLayer):
                     bias_constraint=self._bias_constraint,
                     name="expand1",
                 )
+            RR = (img_dim + res_dim * 3 + 1) // 2
             self.prenorm2_layer = tf.keras.layers.LayerNormalization(name="prenorm2")
             self.project1_layer = tf.keras.layers.Conv2D(
-                img_dim + res_dim,
+                RR,
                 1,
                 padding="same",
                 activation="swish",
@@ -1094,7 +1095,7 @@ class Downsize2D_V4(DUCLayer):
             )
             self.prenorm3_layer = tf.keras.layers.LayerNormalization(name="prenorm3")
             self.expand2_layer = tf.keras.layers.Conv2D(
-                img_dim * 6 + res_dim * 4,
+                img_dim * 2 + RR * 4,
                 self._kernel_size,
                 padding="same",
                 activation="swish",
@@ -1131,6 +1132,7 @@ class Downsize2D_V4(DUCLayer):
         W = input_shape[2] // 2
 
         # merge pairs of consecutive pixels in each row
+        # target R = (I + 3R)/2 if R > 0 else I
         x = tf.reshape(x, [B, H * 2, W, 2, I + R])
         xl = x[:, :, :, 0, :I]
         xr = x[:, :, :, 1, :I]
@@ -1143,12 +1145,16 @@ class Downsize2D_V4(DUCLayer):
                 x = self.expand1_layer(
                     x, training=training
                 )  # shape = [B, H * 2, W, I * 2 + R * 4]
+            RR = (I + R * 3 + 1) // 2
             x = self.prenorm2_layer(x, training=training)
-            x = self.project1_layer(x, training=training)  # shape = [B, H*2, W, I + R]
+            x = self.project1_layer(x, training=training)  # shape = [B, H*2, W, RR]
+            x_avg = tf.reshape(x_avg, [B, H, 2, W, I])
+            x = tf.reshape(x, [B, H, 2, W, RR])
         else:
             x = x_res
-        x_avg = tf.reshape(x_avg, [B, H, 2, W, I])
-        x = tf.reshape(x, [B, H, 2, W, I + R])
+            x_avg = tf.reshape(x_avg, [B, H, 2, W, I])
+            x = tf.reshape(x, [B, H, 2, W, I])
+            RR = I
 
         # merge pairs of consecutive pixels in each column
         xt = x_avg[:, :, 0, :, :]
@@ -1158,7 +1164,7 @@ class Downsize2D_V4(DUCLayer):
         x = tf.concat([x_avg, x_res, x[:, :, 0, :, :], x[:, :, 1, :, :]], axis=3)
         if R > 0:
             x = self.prenorm3_layer(x, training=training)
-            x = self.expand2_layer(x, training=training)  # shape = [B, H, W, I*6+R*4]
+            x = self.expand2_layer(x, training=training)  # shape = [B, H, W, I*2+RR*4]
         x = self.prenorm4_layer(x, training=training)
         x = self.project2_layer(x, training=training)  # shape = [B, H, W, I + 2 * R]
         x = tf.concat([x_avg, x], axis=3)  # shape = [B, H, W, 2 * (I + R)]

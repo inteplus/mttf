@@ -1377,7 +1377,7 @@ class UpsizeX2D(DUCLayerV5):
 
         # output
         x = tf.concat([x_avg + x, x_avg - x], axis=3)
-        x = tf.reshape([B, H, W * 2, self.I + self.R])
+        x = tf.reshape(x, [B, H, W * 2, self.I + self.R])
         return x
 
     call.__doc__ = DUCLayerV5.call.__doc__

@@ -1124,7 +1124,7 @@ class DUCLayerV5(DUCLayer):
         base_config = super(DUCLayerV5, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
-    get_config.__doc__ = DUCLayerV5.get_config.__doc__
+    get_config.__doc__ = DUCLayer.get_config.__doc__
 
 
 class DownsizeX2D(DUCLayerV5):

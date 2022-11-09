@@ -1176,6 +1176,8 @@ class DownsizeX2D(DUCLayerV5):
         **kwargs
     ):
         super(DownsizeX2D, self).__init__(
+            img_dim,
+            res_dim,
             kernel_size=kernel_size,
             kernel_initializer=kernel_initializer,
             bias_initializer=bias_initializer,
@@ -1299,6 +1301,8 @@ class UpsizeX2D(DUCLayerV5):
         **kwargs
     ):
         super(UpsizeX2D, self).__init__(
+            img_dim,
+            res_dim,
             kernel_size=kernel_size,
             kernel_initializer=kernel_initializer,
             bias_initializer=bias_initializer,
@@ -1428,6 +1432,8 @@ class DownsizeY2D(DUCLayerV5):
         **kwargs
     ):
         super(DownsizeY2D, self).__init__(
+            img_dim,
+            res_dim,
             kernel_size=kernel_size,
             kernel_initializer=kernel_initializer,
             bias_initializer=bias_initializer,
@@ -1545,6 +1551,8 @@ class UpsizeY2D(DUCLayerV5):
         **kwargs
     ):
         super(UpsizeY2D, self).__init__(
+            img_dim,
+            res_dim,
             kernel_size=kernel_size,
             kernel_initializer=kernel_initializer,
             bias_initializer=bias_initializer,

@@ -1316,7 +1316,7 @@ class UpsizeX2D(DUCLayerV5):
         if res_dim > 0:
             self.prenorm1_layer = tf.keras.layers.LayerNormalization(name="prenorm1")
             self.expand1_layer = tf.keras.layers.Conv2D(
-                (self.I + self.RX) * 2,
+                (self.I + self.R) * 4,
                 self._kernel_size,
                 padding="same",
                 activation="swish",
@@ -1565,7 +1565,7 @@ class UpsizeY2D(DUCLayerV5):
 
         self.prenorm1_layer = tf.keras.layers.LayerNormalization(name="prenorm1")
         self.expand1_layer = tf.keras.layers.Conv2D(
-            (self.I + self.RY) * 2,
+            (self.I + self.RX) * 4,
             self._kernel_size,
             padding="same",
             activation="swish",

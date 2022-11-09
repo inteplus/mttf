@@ -14,6 +14,10 @@ __all__ = [
     "Upsize2D_V2",
     "Downsize2D_V3",
     "Downsize2D_V4",
+    "DownsizeX2D",
+    "UpsizeX2D",
+    "DownsizeY2D",
+    "UpsizeY2D",
 ]
 
 
@@ -1120,7 +1124,7 @@ class DUCLayerV5(DUCLayer):
         base_config = super(DUCLayerV5, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
-    get_config.__doc__ = DUCLayer.get_config.__doc__
+    get_config.__doc__ = DUCLayerV5.get_config.__doc__
 
 
 class DownsizeX2D(DUCLayerV5):
@@ -1188,7 +1192,7 @@ class DownsizeX2D(DUCLayerV5):
                     name="prenorm1"
                 )
                 self.expand1_layer = tf.keras.layers.Conv2D(
-                    (img_dim + self.R) * 4,
+                    (self.I + self.R) * 4,
                     self._kernel_size,
                     padding="same",
                     activation="swish",
@@ -1228,24 +1232,151 @@ class DownsizeX2D(DUCLayerV5):
         xr = x[:, :, :, 1, :]
         x_avg = (xl + xr) * 0.5
         x_res = xl - xr
-        if R > 0:
+        if self.R > 0:
             x = tf.concat([x_avg, x_res], axis=3)
-            if R > I:
+            if self.R > self.I:
                 x = self.prenorm1_layer(x, training=training)
-                x = self.expand1_layer(
-                    x, training=training
-                )  # shape = [B, H, W, I * 4 + R * 4]
+                x = self.expand1_layer(x, training=training)  # shape = [B,H,W,(I+R)*4]
             x = self.prenorm2_layer(x, training=training)
             x = self.project1_layer(x, training=training)  # shape = [B, H, W, RX]
         else:
             x = x_res  # shape = [B, H, W, RX]
 
         # output
-        x_avg = x_avg[:, :, :, :I]
+        x_avg = x_avg[:, :, :, : self.I]
         x = tf.concat([x_avg, x], axis=3)  # shape = [B, H, W, I + RX]
         return x
 
-    call.__doc__ = DUCLayer.call.__doc__
+    call.__doc__ = DUCLayerV5.call.__doc__
+
+
+class UpsizeX2D(DUCLayerV5):
+    """Downsizing along the x-axis and the y-axis using convolutions of residuals.
+
+    Downsizing means halving the width and the height and doubling the number of channels.
+
+    TBC
+
+    This layer is supposed to be nearly an inverse of the Upsize2D layer.
+
+    Input dimensionality consists of image dimensionality and residual dimensionality.
+
+    Parameters
+    ----------
+    img_dim : int
+        the image dimensionality
+    res_dim : int
+        the residual dimensionality
+    kernel_size : int or tuple or list
+        An integer or tuple/list of 2 integers, specifying the height and width of the 2D
+        convolution window. Can be a single integer to specify the same value for all spatial
+        dimensions.
+    kernel_initializer : object
+        Initializer for the convolutional kernels.
+    bias_initializer : object
+        Initializer for the convolutional biases.
+    kernel_regularizer : object
+        Regularizer for the convolutional kernels.
+    bias_regularizer : object
+        Regularizer for the convolutional biases.
+    kernel_constraint: object
+        Contraint function applied to the convolutional layer kernels.
+    bias_constraint: object
+        Contraint function applied to the convolutional layer biases.
+    """
+
+    def __init__(
+        self,
+        img_dim: int,
+        res_dim: int,
+        kernel_size: tp.Union[int, tuple, list] = 1,
+        kernel_initializer="glorot_uniform",
+        bias_initializer="zeros",
+        kernel_regularizer=None,
+        bias_regularizer=None,
+        kernel_constraint=None,
+        bias_constraint=None,
+        **kwargs
+    ):
+        super(UpsizeX2D, self).__init__(
+            kernel_size=kernel_size,
+            kernel_initializer=kernel_initializer,
+            bias_initializer=bias_initializer,
+            kernel_regularizer=kernel_regularizer,
+            bias_regularizer=bias_regularizer,
+            kernel_constraint=kernel_constraint,
+            bias_constraint=bias_constraint,
+            **kwargs
+        )
+
+        if res_dim > 0:
+            self.prenorm1_layer = tf.keras.layers.LayerNormalization(name="prenorm1")
+            self.expand1_layer = tf.keras.layers.Conv2D(
+                (self.I + self.RX) * 2,
+                self._kernel_size,
+                padding="same",
+                activation="swish",
+                kernel_initializer=self._kernel_initializer,
+                bias_initializer=self._bias_initializer,
+                kernel_regularizer=self._kernel_regularizer,
+                bias_regularizer=self._bias_regularizer,
+                kernel_constraint=self._kernel_constraint,
+                bias_constraint=self._bias_constraint,
+                name="expand1",
+            )
+            self.prenorm2_layer = tf.keras.layers.LayerNormalization(name="prenorm2")
+            self.project1_layer = tf.keras.layers.Conv2D(
+                self.R,
+                1,
+                padding="same",
+                activation="sigmoid",  # (0., 1.)
+                kernel_initializer=self._kernel_initializer,
+                bias_initializer=self._bias_initializer,
+                kernel_regularizer=self._kernel_regularizer,
+                bias_regularizer=self._bias_regularizer,
+                kernel_constraint=self._kernel_constraint,
+                bias_constraint=self._bias_constraint,
+                name="project1",
+            )
+            self.project2_layer = tf.keras.layers.Conv2D(
+                self.I + self.R,
+                1,
+                padding="same",
+                activation="tanh",  # (-1., 1.)
+                kernel_initializer=self._kernel_initializer,
+                bias_initializer=self._bias_initializer,
+                kernel_regularizer=self._kernel_regularizer,
+                bias_regularizer=self._bias_regularizer,
+                kernel_constraint=self._kernel_constraint,
+                bias_constraint=self._bias_constraint,
+                name="project2",
+            )
+
+    def call(self, x, training: bool = False):
+        # shape
+        input_shape = tf.shape(x)
+        B = input_shape[0]
+        H = input_shape[1]
+        W = input_shape[2]
+
+        # split pairs of consecutive pixels in each row
+        x_avg = x[:, :, :, : self.I]
+        if self.R > 0:
+            x = self.prenorm1_layer(x, training=training)
+            x = self.expand1_layer(x, training=training)  # shape = [B, H, W, (I+RX)*2]
+            x = self.prenorm2_layer(x, training=training)
+            x1 = self.project1_layer(x, training=training)  # shape = [B, H, W, R]
+            x = self.project2_layer(x, training=training)  # shape = [B, H, W, I + R]
+            x_avg = tf.concat([x_avg, x1], axis=3)
+        else:
+            x = x[:, :, :, self.I :] * 0.5
+
+        # output
+        x = tf.concat([x_avg + x, x_avg - x], axis=3)
+        x = tf.reshape([B, H, W * 2, self.I + self.R])
+        return x
+
+    call.__doc__ = DUCLayerV5.call.__doc__
 
 
 class DownsizeY2D(DUCLayerV5):
@@ -1351,11 +1482,9 @@ class DownsizeY2D(DUCLayerV5):
         x_avg = (xt + xb) * 0.5
         x_res = xt - xb
         x = tf.concat([x_avg, x_res], axis=3)
-        if R > 0:
+        if self.R > 0:
             x = self.prenorm1_layer(x, training=training)
-            x = self.expand1_layer(
-                x, training=training
-            )  # shape = [B, H, W, I * 2 + RX * 4]
+            x = self.expand1_layer(x, training=training)  # shape = [B, H, W, I*2+RX*4]
         x = self.prenorm2_layer(x, training=training)
         x = self.project1_layer(x, training=training)  # shape = [B, H, W, RY]
 
@@ -1364,4 +1493,131 @@ class DownsizeY2D(DUCLayerV5):
         x = tf.concat([x_avg, x], axis=3)  # shape = [B, H, W, I + RY]
         return x
 
-    call.__doc__ = DUCLayer.call.__doc__
+    call.__doc__ = DUCLayerV5.call.__doc__
+
+
+class UpsizeY2D(DUCLayerV5):
+    """Downsizing along the x-axis and the y-axis using convolutions of residuals.
+
+    Downsizing means halving the width and the height and doubling the number of channels.
+
+    TBC
+
+    This layer is supposed to be nearly an inverse of the Upsize2D layer.
+
+    Input dimensionality consists of image dimensionality and residual dimensionality.
+
+    Parameters
+    ----------
+    img_dim : int
+        the image dimensionality
+    res_dim : int
+        the residual dimensionality
+    kernel_size : int or tuple or list
+        An integer or tuple/list of 2 integers, specifying the height and width of the 2D
+        convolution window. Can be a single integer to specify the same value for all spatial
+        dimensions.
+    kernel_initializer : object
+        Initializer for the convolutional kernels.
+    bias_initializer : object
+        Initializer for the convolutional biases.
+    kernel_regularizer : object
+        Regularizer for the convolutional kernels.
+    bias_regularizer : object
+        Regularizer for the convolutional biases.
+    kernel_constraint: object
+        Contraint function applied to the convolutional layer kernels.
+    bias_constraint: object
+        Contraint function applied to the convolutional layer biases.
+    """
+
+    def __init__(
+        self,
+        img_dim: int,
+        res_dim: int,
+        kernel_size: tp.Union[int, tuple, list] = 1,
+        kernel_initializer="glorot_uniform",
+        bias_initializer="zeros",
+        kernel_regularizer=None,
+        bias_regularizer=None,
+        kernel_constraint=None,
+        bias_constraint=None,
+        **kwargs
+    ):
+        super(UpsizeY2D, self).__init__(
+            kernel_size=kernel_size,
+            kernel_initializer=kernel_initializer,
+            bias_initializer=bias_initializer,
+            kernel_regularizer=kernel_regularizer,
+            bias_regularizer=bias_regularizer,
+            kernel_constraint=kernel_constraint,
+            bias_constraint=bias_constraint,
+            **kwargs
+        )
+
+        self.prenorm1_layer = tf.keras.layers.LayerNormalization(name="prenorm1")
+        self.expand1_layer = tf.keras.layers.Conv2D(
+            (self.I + self.RY) * 2,
+            self._kernel_size,
+            padding="same",
+            activation="swish",
+            kernel_initializer=self._kernel_initializer,
+            bias_initializer=self._bias_initializer,
+            kernel_regularizer=self._kernel_regularizer,
+            bias_regularizer=self._bias_regularizer,
+            kernel_constraint=self._kernel_constraint,
+            bias_constraint=self._bias_constraint,
+            name="expand1",
+        )
+        self.prenorm2_layer = tf.keras.layers.LayerNormalization(name="prenorm2")
+        self.project1_layer = tf.keras.layers.Conv2D(
+            self.RX,
+            1,
+            padding="same",
+            activation="sigmoid",  # (0., 1.)
+            kernel_initializer=self._kernel_initializer,
+            bias_initializer=self._bias_initializer,
+            kernel_regularizer=self._kernel_regularizer,
+            bias_regularizer=self._bias_regularizer,
+            kernel_constraint=self._kernel_constraint,
+            bias_constraint=self._bias_constraint,
+            name="project1",
+        )
+        self.project2_layer = tf.keras.layers.Conv2D(
+            self.I + self.RX,
+            1,
+            padding="same",
+            activation="tanh",  # (-1., 1.)
+            kernel_initializer=self._kernel_initializer,
+            bias_initializer=self._bias_initializer,
+            kernel_regularizer=self._kernel_regularizer,
+            bias_regularizer=self._bias_regularizer,
+            kernel_constraint=self._kernel_constraint,
+            bias_constraint=self._bias_constraint,
+            name="project2",
+        )
+
+    def call(self, x, training: bool = False):
+        # shape
+        input_shape = tf.shape(x)
+        B = input_shape[0]
+        H = input_shape[1]
+        W = input_shape[2]
+
+        # split pairs of consecutive pixels in each column
+        x_avg = x[:, :, :, : self.I]
+        x = self.prenorm1_layer(x, training=training)
+        x = self.expand1_layer(x, training=training)  # shape = [B, H, W, (I + RY) * 2]
+        x = self.prenorm2_layer(x, training=training)
+        x1 = self.project1_layer(x, training=training)  # shape = [B, H, W, RX]
+        x = self.project2_layer(x, training=training)  # shape = [B, H, W, I + RX]
+        x_avg = tf.concat([x_avg, x1], axis=3)
+
+        # output
+        x = tf.concat([x_avg + x, x_avg - x], axis=3)
+        x = tf.reshape(x, [B, H, W, 2, self.I + self.RX])
+        x = tf.transpose(x, perm=[B, H, 2, W, self.I + self.RX])
+        x = tf.reshape(x, [B, H * 2, W, self.I + self.RX])
+        return x
+
+    call.__doc__ = DUCLayerV5.call.__doc__

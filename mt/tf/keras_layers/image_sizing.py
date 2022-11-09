@@ -1495,7 +1495,7 @@ class DownsizeY2D(DUCLayerV5):
         x = self.project1_layer(x, training=training)  # shape = [B, H, W, RY]
 
         # output
-        x_avg = x_avg[:, :, :, :I]
+        x_avg = x_avg[:, :, :, : self.I]
         x = tf.concat([x_avg, x], axis=3)  # shape = [B, H, W, I + RY]
         return x
 

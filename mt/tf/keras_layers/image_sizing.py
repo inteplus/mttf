@@ -1229,24 +1229,24 @@ class DownsizeX2D(DUCLayerV5):
         W = input_shape[2] // 2
 
         # merge pairs of consecutive pixels in each row
-        x = tf.reshape(x, [B, H, W, 2, self.I + self.R])
-        xl = x[:, :, :, 0, :]
-        xr = x[:, :, :, 1, :]
-        x_avg = (xl + xr) * 0.5
-        x_res = xl - xr
         if self.R > 0:
+            x = tf.reshape(x, [B, H, W, 2, self.I + self.R])
+            xl = x[:, :, :, 0, :]
+            xr = x[:, :, :, 1, :]
+            x_avg = (xl + xr) * 0.5
+            x_res = xl - xr
             x = tf.concat([x_avg, x_res], axis=3)
             if self.R > self.I:
                 x = self.prenorm1_layer(x, training=training)
                 x = self.expand1_layer(x, training=training)  # shape = [B,H,W,(I+R)*4]
             x = self.prenorm2_layer(x, training=training)
             x = self.project1_layer(x, training=training)  # shape = [B, H, W, RX]
+            x_avg = x_avg[:, :, :, : self.I]
+            x = tf.concat([x_avg, x], axis=3)  # shape = [B, H, W, I + RX]
         else:
-            x = x_res  # shape = [B, H, W, RX]
+            x = tf.reshape(x, [B, H, W, self.I * 2])
 
         # output
-        x_avg = x_avg[:, :, :, : self.I]
-        x = tf.concat([x_avg, x], axis=3)  # shape = [B, H, W, I + RX]
         return x
 
     call.__doc__ = DUCLayerV5.call.__doc__
@@ -1364,20 +1364,20 @@ class UpsizeX2D(DUCLayerV5):
         W = input_shape[2]
 
         # split pairs of consecutive pixels in each row
-        x_avg = x[:, :, :, : self.I]
         if self.R > 0:
+            x_avg = x[:, :, :, : self.I]
             x = self.prenorm1_layer(x, training=training)
             x = self.expand1_layer(x, training=training)  # shape = [B, H, W, (I+RX)*2]
             x = self.prenorm2_layer(x, training=training)
             x1 = self.project1_layer(x, training=training)  # shape = [B, H, W, R]
             x = self.project2_layer(x, training=training)  # shape = [B, H, W, I + R]
             x_avg = tf.concat([x_avg, x1], axis=3)
+            x = tf.concat([x_avg + x, x_avg - x], axis=3)
+            x = tf.reshape(x, [B, H, W * 2, self.I + self.R])
         else:
-            x = x[:, :, :, self.I :] * 0.5
+            x = tf.reshape(x, [B, H, W * 2, self.I])
 
         # output
-        x = tf.concat([x_avg + x, x_avg - x], axis=3)
-        x = tf.reshape(x, [B, H, W * 2, self.I + self.R])
         return x
 
     call.__doc__ = DUCLayerV5.call.__doc__

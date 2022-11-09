@@ -1624,7 +1624,7 @@ class UpsizeY2D(DUCLayerV5):
         # output
         x = tf.concat([x_avg + x, x_avg - x], axis=3)
         x = tf.reshape(x, [B, H, W, 2, self.I + self.RX])
-        x = tf.transpose(x, perm=[B, H, 2, W, self.I + self.RX])
+        x = tf.transpose(x, perm=[0, 1, 3, 2, 4])
         x = tf.reshape(x, [B, H * 2, W, self.I + self.RX])
         return x
 

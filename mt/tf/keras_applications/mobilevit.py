@@ -10,9 +10,7 @@ The paper authors' code is `here <https://github.com/apple/ml-cvnets>`_.
 """
 
 
-import typing as tp
-
-from mt import tfc, tf
+from mt import tp, tfc, tf
 
 
 try:

@@ -1,7 +1,8 @@
 """The core part of mttf that can be imported without touching the Tensorflow package."""
 
-import typing as tp
 import yaml
+
+from mt import tp
 
 __all__ = [
     "ModelSyntaxError",

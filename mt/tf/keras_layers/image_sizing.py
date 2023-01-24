@@ -1,9 +1,8 @@
 """Module involves upsizing and downsizing images in each axis individually using convolutions of residuals."""
 
-import typing as tp
-
-import numpy as np
 import tensorflow as tf
+
+from mt import tp, np
 
 
 __all__ = [

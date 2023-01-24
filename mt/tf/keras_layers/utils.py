@@ -1,6 +1,6 @@
 """Useful subroutines dealing with GPU devices."""
 
-import typing as tp
+from mt import tp
 
 from ..utils import NameScope
 

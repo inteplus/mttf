@@ -1,5 +1,6 @@
-import typing as tp
 import tensorflow as tf
+
+from mt import tp
 
 
 class VarianceRegularizer(tf.keras.layers.Layer):

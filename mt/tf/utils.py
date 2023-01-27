@@ -1,7 +1,6 @@
 """Useful subroutines dealing with GPU devices."""
 
-import typing as tp
-
+from mt import tp, np
 
 __all__ = ["gpus_in_tf_format", "as_floatx", "sigmoid", "asigmoid", "NameScope"]
 
@@ -17,7 +16,6 @@ def gpus_in_tf_format(gpus):
 def as_floatx(x):
     """Ensures that a tensor is of dtype floatx."""
 
-    from mt import np
     import tensorflow as tf
 
     if not np.issubdtype(x.dtype.as_numpy_dtype, np.floating):

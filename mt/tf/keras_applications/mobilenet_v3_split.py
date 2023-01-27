@@ -32,8 +32,7 @@ no pre-trained weights exist.
 """
 
 
-import typing as tp
-from mt import tfc
+from mt import tp, tfc
 
 
 __all__ = [

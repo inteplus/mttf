@@ -15,11 +15,11 @@
 """A simplified version of keras-based attention layer."""
 # pylint: disable=g-classes-have-attributes
 
-import typing as tp
 import math
 import tensorflow as tf
-from mt import tfc
 from tensorflow.python.util.tf_export import keras_export
+
+from mt import tp, tfc
 
 
 @keras_export("keras.layers.SimpleMHA2D")

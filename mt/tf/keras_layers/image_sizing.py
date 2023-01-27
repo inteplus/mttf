@@ -6,21 +6,6 @@ import numpy as np
 import tensorflow as tf
 
 
-__all__ = [
-    "DUCLayer",
-    "Downsize2D",
-    "Upsize2D",
-    "Downsize2D_V2",
-    "Upsize2D_V2",
-    "Downsize2D_V3",
-    "Downsize2D_V4",
-    "DownsizeX2D",
-    "UpsizeX2D",
-    "DownsizeY2D",
-    "UpsizeY2D",
-]
-
-
 def mirror_all_weights(l_weights: list) -> list:
     """TBC"""
 

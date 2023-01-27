@@ -1,9 +1,6 @@
 import tensorflow.keras.layers as _kl
 
 
-__all__ = ["Identical"]
-
-
 class Identical(_kl.Layer):
     """An identical layer, mainly for renaming purposes."""
 

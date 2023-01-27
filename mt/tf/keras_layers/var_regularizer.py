@@ -2,9 +2,6 @@ import typing as tp
 import tensorflow as tf
 
 
-__all__ = ["VarianceRegularizer"]
-
-
 class VarianceRegularizer(tf.keras.layers.Layer):
     """A regularizer on the variance of the input tensor.
 

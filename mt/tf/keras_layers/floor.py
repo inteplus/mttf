@@ -1,13 +1,11 @@
 import tensorflow as tf
 
 
-__all__ = ["Floor"]
-
-
 @tf.custom_gradient
 def floor(x):
-    def grad(upstream): # identity
+    def grad(upstream):  # identity
         return upstream
+
     return tf.math.floor(x), grad
 
 

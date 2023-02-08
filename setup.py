@@ -11,7 +11,10 @@ setup(
     packages=find_namespace_packages(include=["mt.*"]),
     install_requires=[
         # 'tensorflow', 'tensorflow-cpu' or 'tensorflow-gpu'
-        "mtbase>=3.7",  # to have from mt import tp
+        "mtbase>=3.8",  # to have from mt import tp
+    ],
+    scripts=[
+        "scripts/wml_nexus.py",
     ],
     url="https://github.com/inteplus/mttf",
     project_urls={

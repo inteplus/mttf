@@ -14,7 +14,9 @@ setup(
         "mtbase>=3.8",  # to have from mt import tp
     ],
     scripts=[
-        "scripts/wml_nexus.py",
+        "scripts/wml_nexus.py",  # for accessing Winnow Nexus repo
+        "scripts/wml_pipi.sh",  # for accessing Winnow Nexus repo
+        "scripts/wml_twineu.sh",  # for accessing Winnow Nexus repo
     ],
     url="https://github.com/inteplus/mttf",
     project_urls={

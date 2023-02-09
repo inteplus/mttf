@@ -171,8 +171,6 @@ class NormedConv2D(tk.layers.Layer):
         for key in self.keys:
             setattr(self, key, locals()[key])
 
-        self.counter = Counter()
-
         self.conv2d = tk.layers.Conv2D(
             filters,
             kernel_size,
@@ -187,6 +185,8 @@ class NormedConv2D(tk.layers.Layer):
             kernel_regularizer=kernel_regularizer,
             kernel_constraint=kernel_constraint,
         )
+
+        self.counter = Counter()
 
         self.norm = tk.layers.LayerNormalization(
             axis=-1,

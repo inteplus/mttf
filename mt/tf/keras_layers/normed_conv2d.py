@@ -236,5 +236,8 @@ class NormedConv2D(tk.layers.Layer):
             if not isinstance(value, str):
                 value = tk.constraints.serialize(value)
             config[key] = value
+        for key in config:
+            if config[key] is None:
+                del config[key]
         base_config = super(NormedConv2D, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))

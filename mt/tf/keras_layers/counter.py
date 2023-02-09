@@ -13,7 +13,9 @@ class Counter(tk.layers.Layer):
     def call(self, x, training: bool = False):
         if training:
             self.counter.assign_add(self.incrementor)
-        return self.counter
+        y = tf.reshape(x, [-1])[:1]
+        y = tf.stop_gradient(y) * 0.0
+        return self.counter + y
 
     call.__doc__ = tk.layers.Layer.call.__doc__
 
@@ -27,5 +29,5 @@ class Counter(tk.layers.Layer):
             "init_val": self.init_val,
             "inc": self.inc,
         }
-        base_config = super(MHAPool2D, self).get_config()
+        base_config = super(Counter, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))

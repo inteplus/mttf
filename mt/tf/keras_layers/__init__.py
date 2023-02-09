@@ -4,6 +4,7 @@ from .var_regularizer import *
 from .simple_mha import *
 from .image_sizing import *
 from .counter import Counter
+from .normed_conv2d import NormedConv2D
 from .utils import *
 
 

@@ -23,11 +23,3 @@ class Counter(tk.layers.Layer):
         return (1,)
 
     compute_output_shape.__doc__ = tk.layers.Layer.compute_output_shape.__doc__
-
-    def get_config(self):
-        config = {
-            "init_val": self.init_val,
-            "inc": self.inc,
-        }
-        base_config = super(Counter, self).get_config()
-        return dict(list(base_config.items()) + list(config.items()))

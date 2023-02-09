@@ -3,6 +3,7 @@ from .floor import *
 from .var_regularizer import *
 from .simple_mha import *
 from .image_sizing import *
+from .counter import Counter
 from .utils import *
 
 
@@ -23,6 +24,7 @@ __api__ = [
     "UpsizeX2D",
     "DownsizeY2D",
     "UpsizeY2D",
+    "Counter",
     "conv2d",
     "dense2d",
 ]

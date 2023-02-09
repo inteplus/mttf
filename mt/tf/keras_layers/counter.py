@@ -7,7 +7,9 @@ class Counter(tk.layers.Layer):
 
     def build(self, input_shape):
         initializer = tk.initializers.Constant(value=0.0)
-        self.counter = self.add_weight(shape=(1,), initializer=initializer)
+        self.counter = self.add_weight(
+            name="counter", shape=(1,), initializer=initializer
+        )
         self.incrementor = tf.constant([1.0])
 
     def call(self, x, training: bool = False):

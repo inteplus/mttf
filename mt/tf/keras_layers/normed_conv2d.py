@@ -222,10 +222,19 @@ class NormedConv2D(tk.layers.Layer):
         prefixes = ["kernel", "gamma", "beta"]
         for prefix in prefixes:
             key = prefix + "_initializer"
-            config[key] = tk.initializers.serialize(config[key])
+            value = config[key]
+            if not isinstance(value, str):
+                value = tk.initializers.serialize(value)
+            config[key] = value
             key = prefix + "_regularizer"
-            config[key] = tk.regularizers.serialize(config[key])
+            value = config[key]
+            if not isinstance(value, str):
+                value = tk.regularizers.serialize(value)
+            config[key] = value
             key = prefix + "_constraint"
-            config[key] = tk.constraints.serialize(config[key])
+            value = config[key]
+            if not isinstance(value, str):
+                value = tk.constraints.serialize(value)
+            config[key] = value
         base_config = super(NormedConv2D, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))

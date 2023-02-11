@@ -11,6 +11,7 @@ from mt import net, logg
 
 async def main():
     argv = sys.argv
+    logg.logger.setLevel(logg.INFO)
 
     if len(argv) < 2:
         print("Opens localhost:5443 as nexus https and runs a command.")

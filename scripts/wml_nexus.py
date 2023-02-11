@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import asyncio
 import time
 import sys
 import subprocess
@@ -7,7 +8,8 @@ import sshtunnel
 
 from mt import net, logg
 
-if __name__ == "__main__":
+
+async def main():
     argv = sys.argv
 
     if len(argv) < 2:
@@ -19,12 +21,12 @@ if __name__ == "__main__":
         raise RuntimeError("Local port 5443 already in use.")
 
     if net.is_port_open("nexus.winnow.tech", 443):
-        net.launch_port_forwarder(
+        async with net.port_forwarder_actx(
             ":5443", ["nexus.winnow.tech:443"], logger=logg.logger
-        )
-        time.sleep(0.1)
-        res = subprocess.run(argv[1:], shell=False, check=False)
-        sys.exit(res.returncode)
+        ):
+            process = await asyncio.create_subprocess_exec(argv[1:])
+            returncode = await process.wait()
+            sys.exit(returncode)
 
     with sshtunnel.open_tunnel(
         ("clujdc.edge.winnowsolutions.com", 22222),
@@ -35,3 +37,7 @@ if __name__ == "__main__":
     ) as tun:
         res = subprocess.run(argv[1:], shell=False, check=False)
         sys.exit(res.returncode)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

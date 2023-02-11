@@ -21,10 +21,11 @@ async def main():
         raise RuntimeError("Local port 5443 already in use.")
 
     if net.is_port_open("nexus.winnow.tech", 443):
-        async with net.port_forwarder_actx(
+        server = await net.port_forwarder_actx(
             ":5443", ["nexus.winnow.tech:443"], logger=logg.logger
-        ):
-            process = await asyncio.create_subprocess_exec(argv[1:])
+        )
+        async with server:
+            process = await asyncio.create_subprocess_exec(*argv[1:])
             returncode = await process.wait()
             sys.exit(returncode)
 

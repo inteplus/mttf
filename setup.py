@@ -11,7 +11,8 @@ setup(
     packages=find_namespace_packages(include=["mt.*"]),
     install_requires=[
         # 'tensorflow', 'tensorflow-cpu' or 'tensorflow-gpu'
-        "mtbase>=3.8",  # to have from mt import tp
+        "mtbase>=4.2",  # to have from mt import tp
+        "mtnet",  # for some basic networking support
     ],
     scripts=[
         "scripts/wml_nexus.py",  # for accessing Winnow Nexus repo

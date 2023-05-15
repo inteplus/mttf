@@ -465,7 +465,7 @@ def MobileNetV3Split(
     outputs = [x]
 
     num_blocks = 5 if model_type == "Large" else 4
-    if num_blocks < max_n_blocks:
+    if num_blocks > max_n_blocks:
         num_blocks = max_n_blocks
     for i in range(num_blocks):
         if model_type == "Large":

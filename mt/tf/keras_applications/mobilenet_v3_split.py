@@ -376,7 +376,7 @@ def MobileNetV3Split(
     input_shape=None,
     alpha: float = 1.0,
     model_type: str = "Large",
-    large_with_extension: bool = False,
+    max_n_blocks: int = 6,
     minimalistic: bool = False,
     mixer_params: tp.Optional[tfc.MobileNetV3MixerParams] = None,
     include_top: bool = True,
@@ -410,9 +410,9 @@ def MobileNetV3Split(
           the mobilenetv3 alpha value
     model_type : {'Small', 'Large'}
         whether it is the small variant or the large variant
-    large_with_extension : bool
-        for the large variant, this boolean argument tells whether to have 1 more extension block
-        to have a total of 5 blocks rather than 4 blocks in the traditional mobilenetv3large arch
+    max_n_blocks : int
+        the maximum number of blocks in the backbone. It is further constrained by the actual
+        maximum number of blocks that the variant can implement.
     minimalistic : bool
         In addition to large and small models this module also contains so-called minimalistic
         models, these models have the same per-layer dimensions characteristic as MobilenetV3
@@ -464,7 +464,9 @@ def MobileNetV3Split(
     x = input_block(input_layer)
     outputs = [x]
 
-    num_blocks = 5 if (model_type == "Large") and large_with_extension else 4
+    num_blocks = 5 if model_type == "Large" else 4
+    if num_blocks < max_n_blocks:
+        num_blocks = max_n_blocks
     for i in range(num_blocks):
         if model_type == "Large":
             block = MobileNetV3LargeBlock(i, x, alpha=alpha, minimalistic=minimalistic)

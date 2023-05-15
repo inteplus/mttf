@@ -20,7 +20,8 @@ The MobileNetV3 model is split into 5 parts:
 
   - The input parser block that downsamples once (:func:`MobileNetV3Parser`).
   - Block 0 to 3 that downample once for each block (:func:`MobileNetV3LargeBlock`
-    or :func:`MobileNetV3SmallBlock`).
+    or :func:`MobileNetV3SmallBlock`). As of 2023/05/15, there's a possibility to have block 4
+    for MobileNetV3Large.
   - The mixer block that turns the downsampled grid into a (1,1,feat_dim) batch
     (:func:`MobileNetV3Mixer`).
   - Optionally the output block that may or may not contain the clasification head
@@ -94,9 +95,7 @@ def MobileNetV3Input(
     cols = input_shape[col_axis]
     if rows and cols and (rows < 32 or cols < 32):
         raise tfc.ModelSyntaxError(
-            "Input size must be at least 32x32; got `input_shape="
-            + str(input_shape)
-            + "`"
+            f"Input size must be at least 32x32; got `input_shape={input_shape}`"
         )
 
     img_input = layers.Input(shape=input_shape)
@@ -128,7 +127,7 @@ def MobileNetV3Parser(
     x = activation(x)
 
     # Create model.
-    model = models.Model(img_input, x, name="MobileNetV3{}Parser".format(model_type))
+    model = models.Model(img_input, x, name=f"MobileNetV3{model_type}Parser")
 
     return model
 
@@ -171,15 +170,13 @@ def MobileNetV3SmallBlock(
         x = _inverted_res_block(x, 6, depth(96), kernel, 1, se_ratio, activation, 10)
 
     # Create model.
-    model = models.Model(
-        input_tensor, x, name="MobileNetV3SmallBlock{}".format(block_id)
-    )
+    model = models.Model(input_tensor, x, name=f"MobileNetV3SmallBlock{block_id}")
 
     return model
 
 
 def MobileNetV3LargeBlock(
-    block_id: int,  # only 0 to 3 are accepted here
+    block_id: int,  # only 0 to 4 are accepted here. 4 is only available as of 2023/05/15
     input_tensor,  # input tensor for the block
     alpha=1.0,
     minimalistic=False,
@@ -214,15 +211,17 @@ def MobileNetV3LargeBlock(
         x = _inverted_res_block(x, 2.3, depth(80), 3, 1, None, activation, 9)
         x = _inverted_res_block(x, 6, depth(112), 3, 1, se_ratio, activation, 10)
         x = _inverted_res_block(x, 6, depth(112), 3, 1, se_ratio, activation, 11)
-    else:
+    elif block_id == 3:
         x = _inverted_res_block(x, 6, depth(160), kernel, 2, se_ratio, activation, 12)
         x = _inverted_res_block(x, 6, depth(160), kernel, 1, se_ratio, activation, 13)
         x = _inverted_res_block(x, 6, depth(160), kernel, 1, se_ratio, activation, 14)
+    else:
+        x = _inverted_res_block(x, 6, depth(320), kernel, 2, se_ratio, activation, 15)
+        x = _inverted_res_block(x, 6, depth(320), kernel, 1, se_ratio, activation, 16)
+        x = _inverted_res_block(x, 6, depth(320), kernel, 1, se_ratio, activation, 17)
 
     # Create model.
-    model = models.Model(
-        input_tensor, x, name="MobileNetV3LargeBlock{}".format(block_id)
-    )
+    model = models.Model(input_tensor, x, name=f"MobileNetV3LargeBlock{block_id}")
 
     return model
 
@@ -304,7 +303,7 @@ def MobileNetV3Mixer(
             key_dim = (c + n_heads - 1) // n_heads
             value_dim = int(key_dim * mhapool_params.expansion_factor)
             k += 1
-            block_name = "MHAPool2DCascade_block{}".format(k)
+            block_name = f"MHAPool2DCascade_block{k}"
             if k > mhapool_params.max_num_pooling_layers:  # GlobalMaxPool2D
                 x = layers.GlobalMaxPooling2D(
                     keepdims=True, name=block_name + "/GlobalMaxPool"
@@ -368,7 +367,7 @@ def MobileNetV3Output(
             return None
 
     # Create model.
-    model = models.Model(input_tensor, x, name="MobileNetV3{}Output".format(model_type))
+    model = models.Model(input_tensor, x, name=f"MobileNetV3{model_type}Output")
 
     return model
 
@@ -377,6 +376,7 @@ def MobileNetV3Split(
     input_shape=None,
     alpha: float = 1.0,
     model_type: str = "Large",
+    large_with_extension: bool = False,
     minimalistic: bool = False,
     mixer_params: tp.Optional[tfc.MobileNetV3MixerParams] = None,
     include_top: bool = True,
@@ -410,6 +410,9 @@ def MobileNetV3Split(
           the mobilenetv3 alpha value
     model_type : {'Small', 'Large'}
         whether it is the small variant or the large variant
+    large_with_extension : bool
+        for the large variant, this boolean argument tells whether to have 1 more extension block
+        to have a total of 5 blocks rather than 4 blocks in the traditional mobilenetv3large arch
     minimalistic : bool
         In addition to large and small models this module also contains so-called minimalistic
         models, these models have the same per-layer dimensions characteristic as MobilenetV3
@@ -461,21 +464,12 @@ def MobileNetV3Split(
     x = input_block(input_layer)
     outputs = [x]
 
-    for i in range(4):
+    num_blocks = 5 if (model_type == "Large") and large_with_extension else 4
+    for i in range(num_blocks):
         if model_type == "Large":
-            block = MobileNetV3LargeBlock(
-                i,
-                x,
-                alpha=alpha,
-                minimalistic=minimalistic,
-            )
+            block = MobileNetV3LargeBlock(i, x, alpha=alpha, minimalistic=minimalistic)
         else:
-            block = MobileNetV3SmallBlock(
-                i,
-                x,
-                alpha=alpha,
-                minimalistic=minimalistic,
-            )
+            block = MobileNetV3SmallBlock(i, x, alpha=alpha, minimalistic=minimalistic)
         x = block(x)
         if output_all:
             outputs.append(x)
@@ -531,7 +525,7 @@ def MobileNetV3Split(
 
     # Create model.
     if name is None:
-        name = "MobilenetV3{}Split".format(model_type)
+        name = f"MobilenetV3{model_type}Split"
     model = models.Model(input_layer, outputs, name=name)
 
     return model

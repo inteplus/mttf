@@ -11,12 +11,14 @@ setup(
     packages=find_namespace_packages(include=["mt.*"]),
     install_requires=[
         # 'tensorflow', 'tensorflow-cpu' or 'tensorflow-gpu'
-        "mtbase>=3.8",  # to have from mt import tp
+        "mtbase>=4.2",  # just updating
+        "mtnet",  # for some basic networking support
     ],
     scripts=[
         "scripts/wml_nexus.py",  # for accessing Winnow Nexus repo
         "scripts/wml_pipi.sh",  # for accessing Winnow Nexus repo
         "scripts/wml_twineu.sh",  # for accessing Winnow Nexus repo
+        "scripts/twine_trusted.py",  # for the ability to disable ssl verification
     ],
     url="https://github.com/inteplus/mttf",
     project_urls={

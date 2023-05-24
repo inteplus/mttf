@@ -5,12 +5,19 @@ import yaml
 from mt import tp
 
 __all__ = [
+    "TensorError",
     "ModelSyntaxError",
     "ModelParams",
     "MHAParams",
     "MHAPool2DCascadeParams",
     "MobileNetV3MixerParams",
 ]
+
+
+class TensorError(ValueError):
+    """Raised when a tensor has an unexpected, usually non-regular value."""
+
+    pass
 
 
 class ModelSyntaxError(SyntaxError):

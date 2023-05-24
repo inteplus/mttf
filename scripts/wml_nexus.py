@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import asyncio
-import time
 import sys
 import subprocess
 import sshtunnel

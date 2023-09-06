@@ -20,9 +20,17 @@ async def main():
     if net.is_port_open("localhost", 5443, timeout=0.1):
         raise RuntimeError("Local port 5443 already in use.")
 
-    if net.is_port_open("nexus.winnow.tech", 443):
+    l_endpoints = [
+        ("192.168.110.4", 443),
+        ("nexus.winnow.tech", 443),
+    ]
+
+    for host, port in l_endpoints:
+        if not net.is_port_open(host, port):
+            continue
+
         server = await net.port_forwarder_actx(
-            ":5443", ["nexus.winnow.tech:443"], logger=logg.logger
+            ":5443", [f"{host}:{port}"], logger=logg.logger
         )
         async with server:
             process = await asyncio.create_subprocess_exec(*argv[1:])

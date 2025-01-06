@@ -8,6 +8,11 @@ import sshtunnel
 from mt import net, logg
 
 
+def execute(argv):
+    res = subprocess.run(argv[1:], shell=False, check=False)
+    sys.exit(res.returncode)
+
+
 async def main():
     argv = sys.argv
     logg.logger.setLevel(logg.INFO)
@@ -18,7 +23,7 @@ async def main():
         sys.exit(0)
 
     if net.is_port_open("localhost", 5443, timeout=0.1):
-        raise RuntimeError("Local port 5443 already in use.")
+        execute(argv)
 
     l_endpoints = [
         ("192.168.110.4", 443),
@@ -44,8 +49,7 @@ async def main():
         remote_bind_address=("192.168.110.4", 443),
         local_bind_address=("0.0.0.0", 5443),
     ) as tun:
-        res = subprocess.run(argv[1:], shell=False, check=False)
-        sys.exit(res.returncode)
+        execute(argv)
 
 
 if __name__ == "__main__":

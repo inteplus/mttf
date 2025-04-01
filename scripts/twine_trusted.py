@@ -9,22 +9,18 @@ import rich.progress
 
 
 def _upload(self, package: package_file.PackageFile) -> requests.Response:
-    data = package.metadata_dictionary()
-    data.update(
-        {
-            # action
-            ":action": "file_upload",
-            "protocol_version": "1",
-        }
-    )
-
-    data_to_send = self._convert_data_to_list_of_tuples(data)
-
     print(f"Uploading {package.basefilename}")
 
+    metadata = package.metadata_dictionary()
+    data_to_send = self._convert_metadata_to_list_of_tuples(metadata)
+    data_to_send.append((":action", "file_upload"))
+    data_to_send.append(("protocol_version", "1"))
     with open(package.filename, "rb") as fp:
         data_to_send.append(
-            ("content", (package.basefilename, fp, "application/octet-stream"))
+            (
+                "content",
+                (package.basefilename, fp, "application/octet-stream"),
+            )
         )
         encoder = requests_toolbelt.MultipartEncoder(data_to_send)
 
@@ -56,7 +52,7 @@ def _upload(self, package: package_file.PackageFile) -> requests.Response:
                 data=monitor,
                 allow_redirects=False,
                 headers={"Content-Type": monitor.content_type},
-                verify=False,  # MT-TODO: I added this line only
+                verify=False,  # MT-NOTE: I added this line only
             )
 
     return resp

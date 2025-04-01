@@ -14,6 +14,7 @@ setup(
         # 'tensorflow', 'tensorflow-cpu' or 'tensorflow-gpu'
         "mtbase>=4.26",  # just updating
         "mtnet>=0.2",  # for some basic networking support
+        # "twine>=6.0",  # for twine-trusted
     ],
     scripts=[
         "scripts/wml_nexus.py",  # for accessing Winnow Nexus repo

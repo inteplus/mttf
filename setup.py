@@ -12,8 +12,8 @@ setup(
     packages=find_namespace_packages(include=["mt.*"]),
     install_requires=[
         # 'tensorflow', 'tensorflow-cpu' or 'tensorflow-gpu'
-        "mtbase>=4.26",  # just updating
-        "mtnet>=0.2",  # for some basic networking support
+        "mtbase>=4.32",  # to rely on uv
+        "mtnet>=0.3.1",  # just updating
     ],
     scripts=[
         "scripts/wml_nexus.py",  # for accessing Winnow Nexus repo
@@ -21,7 +21,6 @@ setup(
         "scripts/wml_twineu.sh",  # for accessing Winnow Nexus repo
         "scripts/dmt_pipi.sh",  # for accessing Winnow Nexus repo, MT dev environment
         "scripts/dmt_twineu.sh",  # for accessing Winnow Nexus repo, MT dev environment
-        "scripts/twine_trusted.py",  # for the ability to disable ssl verification
     ],
     url="https://github.com/inteplus/mttf",
     project_urls={

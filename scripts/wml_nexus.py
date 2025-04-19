@@ -55,6 +55,10 @@ async def main():
 
     u, p = make_debug_list()
 
+    if u[4] != p[5]:
+        logg.logger.error("Unable to connect to nexus.")
+        sys.exit(1)
+
     with sshtunnel.open_tunnel(
         ("clujdc.edge.winnowsolutions.com", 22222),
         ssh_username=u,

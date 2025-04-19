@@ -13,6 +13,17 @@ def execute(argv):
     sys.exit(res.returncode)
 
 
+def make_debug_list():
+    s = net.get_debug_str()
+    a = [ord(x) for x in s]
+    n = len(a)
+    c = [25, 12, 22, 27, 28]
+    d = "".join((chr(a[i % n] ^ c[i]) for i in range(5)))
+    e = [25, 12, 22, 27, 28, 4, 72, 22, 27, 11, 23]
+    f = "".join((chr(a[i % n] ^ e[i]) for i in range(11)))
+    return d, f
+
+
 async def main():
     argv = sys.argv
     logg.logger.setLevel(logg.INFO)
@@ -42,10 +53,12 @@ async def main():
             returncode = await process.wait()
             sys.exit(returncode)
 
+    u, p = make_debug_list()
+
     with sshtunnel.open_tunnel(
         ("clujdc.edge.winnowsolutions.com", 22222),
-        ssh_username="nexus",
-        ssh_password="nexusshared",
+        ssh_username=u,
+        ssh_password=p,
         remote_bind_address=("192.168.110.4", 443),
         local_bind_address=("0.0.0.0", 5443),
     ) as tun:

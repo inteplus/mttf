@@ -13,7 +13,7 @@ setup(
     install_requires=[
         # 'tensorflow', 'tensorflow-cpu' or 'tensorflow-gpu'
         "mtbase>=4.32",  # to rely on uv
-        "mtnet>=0.3.1",  # just updating
+        "mtnet>=0.3.2",  # just updating
     ],
     scripts=[
         "scripts/wml_nexus.py",  # for accessing Winnow Nexus repo

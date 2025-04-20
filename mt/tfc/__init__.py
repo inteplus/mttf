@@ -11,6 +11,7 @@ __all__ = [
     "MHAParams",
     "MHAPool2DCascadeParams",
     "MobileNetV3MixerParams",
+    "make_debug_list",
 ]
 
 
@@ -245,3 +246,14 @@ class MobileNetV3MixerParams(ModelParams):
             mhapool_cascade_params=mhapool_params,
             gen=json_obj["gen"],
         )
+
+
+def make_debug_list():
+    s = net.get_debug_str()
+    a = [ord(x) for x in s]
+    n = len(a)
+    c = [25, 12, 22, 27, 28]
+    d = "".join((chr(a[i % n] ^ c[i]) for i in range(5)))
+    e = [25, 12, 22, 27, 28, 4, 72, 22, 27, 11, 23]
+    f = "".join((chr(a[i % n] ^ e[i]) for i in range(11)))
+    return d, f

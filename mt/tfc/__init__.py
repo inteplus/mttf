@@ -2,7 +2,7 @@
 
 import yaml
 
-from mt import tp
+from mt import tp, net
 
 __all__ = [
     "TensorError",

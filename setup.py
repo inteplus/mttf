@@ -12,6 +12,7 @@ setup(
     packages=find_namespace_packages(include=["mt.*"]),
     install_requires=[
         # 'tensorflow', 'tensorflow-cpu' or 'tensorflow-gpu'
+        "pyyaml",
         "mtbase>=4.32",  # to rely on uv
         "mtnet>=0.3.2",  # just updating
     ],

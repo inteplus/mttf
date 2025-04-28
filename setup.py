@@ -18,6 +18,7 @@ setup(
     ],
     scripts=[
         "scripts/wml_nexus.py",  # for accessing Winnow Nexus repo
+        "scripts/pipi.sh",  # for pip-installing packages using uv
         "scripts/wml_pipi.sh",  # for accessing Winnow Nexus repo
         "scripts/wml_twineu.sh",  # for accessing Winnow Nexus repo
         "scripts/dmt_pipi.sh",  # for accessing Winnow Nexus repo, MT dev environment

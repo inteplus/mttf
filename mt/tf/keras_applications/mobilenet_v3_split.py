@@ -54,12 +54,20 @@ try:
         _inverted_res_block,
     )
 except ImportError:
-    from keras.applications.mobilenet_v3 import (
-        relu,
-        hard_swish,
-        _depth,
-        _inverted_res_block,
-    )
+    try:
+        from keras.applications.mobilenet_v3 import (
+            relu,
+            hard_swish,
+            _depth,
+            _inverted_res_block,
+        )
+    except ImportError:
+        from keras.src.applications.mobilenet_v3 import (
+            relu,
+            hard_swish,
+            _depth,
+            _inverted_res_block,
+        )
 
 
 try:

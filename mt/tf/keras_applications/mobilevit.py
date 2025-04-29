@@ -18,8 +18,11 @@ try:
 except ImportError:
     try:
         from keras.applications.mobilenet_v3 import _inverted_res_block
-    except:
-        from .mobilenet_v3 import _inverted_res_block
+    except ImportError:
+        try:
+            from keras.src.applications.mobilenet_v3 import _inverted_res_block
+        except ImportError:
+            from .mobilenet_v3_split import _inverted_res_block
 
 
 try:

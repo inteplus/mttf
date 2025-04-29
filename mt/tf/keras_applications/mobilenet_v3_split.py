@@ -69,21 +69,35 @@ except ImportError:
             _inverted_res_block,
         )
 
-
 try:
     from keras import backend
-    from keras import models
-    from keras.layers import VersionAwareLayers
-    from keras.utils import data_utils, layer_utils
 except ImportError:
     from tensorflow.python.keras import backend
+
+try:
+    from keras import models
+except ImportError:
     from tensorflow.python.keras import models
-    from tensorflow.python.keras.layers import VersionAwareLayers
+
+
+try:
+    from keras.layers import VersionAwareLayers
+
+    layers = VersionAwareLayers()
+except ImportError:
+    try:
+        from keras import layers
+    except ImportError:
+        from tensorflow.python.keras.layers import VersionAwareLayers
+
+        layers = VersionAwareLayers()
+
+try:
+    from keras.utils import data_utils, layer_utils
+except ImportError:
     from tensorflow.python.keras.utils import data_utils, layer_utils
+
 from tensorflow.python.platform import tf_logging as logging
-
-
-layers = VersionAwareLayers()
 
 
 def MobileNetV3Input(

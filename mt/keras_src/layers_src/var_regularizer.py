@@ -2,7 +2,7 @@ import tensorflow as tf
 
 from mt import tp
 
-from mt.keras_src import layers
+from .. import layers
 
 
 class VarianceRegularizer(layers.Layer):

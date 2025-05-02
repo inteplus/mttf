@@ -10,7 +10,8 @@ The paper authors' code is `here <https://github.com/apple/ml-cvnets>`_.
 """
 
 
-from mt import tp, tfc, tf
+import tensorflow as tf
+from mt import tp, tfc
 
 from .mobilenet_v3_split import (
     MobileNetV3Input,

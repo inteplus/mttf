@@ -1,9 +1,8 @@
 """Module involves upsizing and downsizing images in each axis individually using convolutions of residuals."""
 
-
 import tensorflow as tf
 from mt import tp, np
-from mt.keras_src import layers, initializers, regularizers, constraints
+from .. import layers, initializers, regularizers, constraints
 
 
 def mirror_all_weights(l_weights: list) -> list:

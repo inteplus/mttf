@@ -28,7 +28,7 @@ def conv2d(name_scope: tfc.NameScope, x, filters, kernel_size, **kwargs):
         TF tensor as output
     """
 
-    from mt.keras_src import layers
+    from .. import layers
 
     next(name_scope)
     x = layers.LayerNormalization(name=name_scope("prenorm"))(x)
@@ -69,7 +69,7 @@ def dense2d(
         TF tensor as output
     """
 
-    from mt.keras_src import layers
+    from .. import layers
 
     next(name_scope)
     x = layers.LayerNormalization(name=name_scope("expand_prenorm"))(x)

@@ -1,5 +1,5 @@
 import tensorflow as tf
-from mt.keras_src import layers, initializers
+from .. import layers, initializers
 
 
 class Counter(layers.Layer):

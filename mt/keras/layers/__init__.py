@@ -1,7 +1,7 @@
 from ..base import layers as _layers
 
 for _x, _y in _layers.__dict__.items():
-    if x.startswith("_"):
+    if _x.startswith("_"):
         continue
     globals()[_x] = _y
 globals.__doc__ = _layers.__doc__

@@ -30,11 +30,11 @@ def conv2d(name_scope: NameScope, x, filters, kernel_size, **kwargs):
         TF tensor as output
     """
 
-    import tensorflow.keras.layers as kl
+    from ..base import layers
 
     next(name_scope)
-    x = kl.LayerNormalization(name=name_scope("prenorm"))(x)
-    x = kl.Conv2D(filters, kernel_size, name=name_scope("conv"), **kwargs)(x)
+    x = layers.LayerNormalization(name=name_scope("prenorm"))(x)
+    x = layers.Conv2D(filters, kernel_size, name=name_scope("conv"), **kwargs)(x)
 
     return x
 
@@ -71,15 +71,15 @@ def dense2d(
         TF tensor as output
     """
 
-    import tensorflow.keras.layers as kl
+    from ..base import layers
 
     next(name_scope)
-    x = kl.LayerNormalization(name=name_scope("expand_prenorm"))(x)
-    x = kl.Conv2D(
+    x = layers.LayerNormalization(name=name_scope("expand_prenorm"))(x)
+    x = layers.Conv2D(
         x.shape[3] * 2, 1, name=name_scope("expand"), activation="relu", **kwargs
     )(x)
-    x = kl.LayerNormalization(name=name_scope("project_prenorm"))(x)
-    x = kl.Conv2D(
+    x = layers.LayerNormalization(name=name_scope("project_prenorm"))(x)
+    x = layers.Conv2D(
         filters,
         kernel_size,
         name=name_scope("project"),

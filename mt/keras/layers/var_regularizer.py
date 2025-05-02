@@ -2,8 +2,10 @@ import tensorflow as tf
 
 from mt import tp
 
+from ..base import layers
 
-class VarianceRegularizer(tf.keras.layers.Layer):
+
+class VarianceRegularizer(layers.Layer):
     """A regularizer on the variance of the input tensor.
 
     Negative rate for making the variance larger. Positive rate for making the variance smaller.
@@ -23,7 +25,7 @@ class VarianceRegularizer(tf.keras.layers.Layer):
         self.add_loss(self.rate * sum_var)
         return x
 
-    call.__doc__ = tf.keras.layers.Layer.call.__doc__
+    call.__doc__ = layers.Layer.call.__doc__
 
     def get_config(self):
         config = {
@@ -33,4 +35,4 @@ class VarianceRegularizer(tf.keras.layers.Layer):
         base_config = super(VarianceRegularizer, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
-    get_config.__doc__ = tf.keras.layers.Layer.get_config.__doc__
+    get_config.__doc__ = layers.Layer.get_config.__doc__

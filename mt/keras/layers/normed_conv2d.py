@@ -1,6 +1,4 @@
 from ..base import layers, initializers, regularizers, constraints
-
-
 from .counter import Counter
 
 

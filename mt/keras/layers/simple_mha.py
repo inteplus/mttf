@@ -21,9 +21,11 @@ from tensorflow.python.util.tf_export import keras_export
 
 from mt import tp, tfc
 
+from ..base import layers, initializers, regularizers, constraints
+
 
 @keras_export("keras.layers.SimpleMHA2D")
-class SimpleMHA2D(tf.keras.layers.Layer):
+class SimpleMHA2D(layers.Layer):
     """SimpleMHA2D layer.
 
     This is a simplified version of the Keras-based MultiHeadAttention layer.
@@ -70,7 +72,7 @@ class SimpleMHA2D(tf.keras.layers.Layer):
     --------
 
     >>> layer = SimpleMHA2D(num_heads=3, key_dim=40, value_dim=80)
-    >>> input_tensor = tf.keras.Input(shape=[8, 8, 160])
+    >>> input_tensor = layers.Input(shape=[8, 8, 160])
     >>> output_tensor = layer(input_tensor)
     >>> print(output_tensor.shape)
     (None, 3, 80)
@@ -97,13 +99,13 @@ class SimpleMHA2D(tf.keras.layers.Layer):
         self._key_dim = key_dim
         self._value_dim = value_dim if value_dim else key_dim
         self._use_bias = use_bias
-        self._activation = tf.keras.activations.get(activation)
-        self._kernel_initializer = tf.keras.initializers.get(kernel_initializer)
-        self._bias_initializer = tf.keras.initializers.get(bias_initializer)
-        self._kernel_regularizer = tf.keras.regularizers.get(kernel_regularizer)
-        self._bias_regularizer = tf.keras.regularizers.get(bias_regularizer)
-        self._kernel_constraint = tf.keras.constraints.get(kernel_constraint)
-        self._bias_constraint = tf.keras.constraints.get(bias_constraint)
+        self._activation = activations.get(activation)
+        self._kernel_initializer = initializers.get(kernel_initializer)
+        self._bias_initializer = initializers.get(bias_initializer)
+        self._kernel_regularizer = regularizers.get(kernel_regularizer)
+        self._bias_regularizer = regularizers.get(bias_regularizer)
+        self._kernel_constraint = constraints.get(kernel_constraint)
+        self._bias_constraint = constraints.get(bias_constraint)
         self._dropout = dropout
 
         self.tensor_query = self.add_weight(
@@ -113,7 +115,7 @@ class SimpleMHA2D(tf.keras.layers.Layer):
             trainable=True,
         )
 
-        self.layer_key_proj = tf.keras.layers.Conv2D(
+        self.layer_key_proj = layers.Conv2D(
             self._num_heads * self._key_dim,  # filters
             1,  # kernel_size
             use_bias=self._use_bias,
@@ -125,7 +127,7 @@ class SimpleMHA2D(tf.keras.layers.Layer):
             bias_constraint=self._bias_constraint,
         )
 
-        self.layer_value_proj = tf.keras.layers.Conv2D(
+        self.layer_value_proj = layers.Conv2D(
             self._num_heads * self._value_dim,  # filters
             1,  # kernel_size
             use_bias=self._use_bias,
@@ -138,9 +140,9 @@ class SimpleMHA2D(tf.keras.layers.Layer):
             bias_constraint=self._bias_constraint,
         )
 
-        self.layer_softmax = tf.keras.layers.Softmax(axis=1)
+        self.layer_softmax = layers.Softmax(axis=1)
         if self._dropout > 0:
-            self.layer_dropout = tf.keras.layers.Dropout(rate=self._dropout)
+            self.layer_dropout = layers.Dropout(rate=self._dropout)
 
     def call(self, key_value, training=None):
         """The call function.
@@ -203,19 +205,13 @@ class SimpleMHA2D(tf.keras.layers.Layer):
             "key_dim": self._key_dim,
             "value_dim": self._value_dim,
             "use_bias": self._use_bias,
-            "activation": tf.keras.activations.serialize(self._activation),
-            "kernel_initializer": tf.keras.initializers.serialize(
-                self._kernel_initializer
-            ),
-            "bias_initializer": tf.keras.initializers.serialize(self._bias_initializer),
-            "kernel_regularizer": tf.keras.regularizers.serialize(
-                self._kernel_regularizer
-            ),
-            "bias_regularizer": tf.keras.regularizers.serialize(self._bias_regularizer),
-            "kernel_constraint": tf.keras.constraints.serialize(
-                self._kernel_constraint
-            ),
-            "bias_constraint": tf.keras.constraints.serialize(self._bias_constraint),
+            "activation": activations.serialize(self._activation),
+            "kernel_initializer": initializers.serialize(self._kernel_initializer),
+            "bias_initializer": initializers.serialize(self._bias_initializer),
+            "kernel_regularizer": regularizers.serialize(self._kernel_regularizer),
+            "bias_regularizer": regularizers.serialize(self._bias_regularizer),
+            "kernel_constraint": constraints.serialize(self._kernel_constraint),
+            "bias_constraint": constraints.serialize(self._bias_constraint),
             "dropout": self._dropout,
         }
         base_config = super(SimpleMHA2D, self).get_config()
@@ -223,7 +219,7 @@ class SimpleMHA2D(tf.keras.layers.Layer):
 
 
 @keras_export("keras.layers.MHAPool2D")
-class MHAPool2D(tf.keras.layers.Layer):
+class MHAPool2D(layers.Layer):
     """Pooling in 2D using Keras-based self-attention.
 
     The layer takes as input a high-dim image tensor of shape [B, H, W, D] where B is the
@@ -279,7 +275,7 @@ class MHAPool2D(tf.keras.layers.Layer):
     --------
 
     >>> layer = MHAPool2D(num_heads=3, key_dim=40, value_dim=80)
-    >>> input_tensor = tf.keras.Input(shape=[8, 8, 160])
+    >>> input_tensor = layers.Input(shape=[8, 8, 160])
     >>> output_tensor = layer(input_tensor)
     >>> print(output_tensor.shape)
     (None, 4, 4, 240)
@@ -310,25 +306,25 @@ class MHAPool2D(tf.keras.layers.Layer):
         self._pooling = pooling
         self._pool_size = pool_size
         self._use_bias = use_bias
-        self._activation = tf.keras.activations.get(activation)
-        self._kernel_initializer = tf.keras.initializers.get(kernel_initializer)
-        self._bias_initializer = tf.keras.initializers.get(bias_initializer)
-        self._kernel_regularizer = tf.keras.regularizers.get(kernel_regularizer)
-        self._bias_regularizer = tf.keras.regularizers.get(bias_regularizer)
-        self._kernel_constraint = tf.keras.constraints.get(kernel_constraint)
-        self._bias_constraint = tf.keras.constraints.get(bias_constraint)
+        self._activation = activations.get(activation)
+        self._kernel_initializer = initializers.get(kernel_initializer)
+        self._bias_initializer = initializers.get(bias_initializer)
+        self._kernel_regularizer = regularizers.get(kernel_regularizer)
+        self._bias_regularizer = regularizers.get(bias_regularizer)
+        self._kernel_constraint = constraints.get(kernel_constraint)
+        self._bias_constraint = constraints.get(bias_constraint)
         self._dropout = dropout
 
         if self._pooling == "max":
-            self.layer_pool = tf.keras.layers.MaxPool2D()
+            self.layer_pool = layers.MaxPool2D()
         elif self._pooling == "avg":
-            self.layer_pool = tf.keras.layers.AveragePooling2D()
+            self.layer_pool = layers.AveragePooling2D()
         else:
             raise tfc.ModelSyntaxError(
                 "Invalid pooling string: '{}'.".format(self._pooling)
             )
 
-        self.layer_query_proj = tf.keras.layers.Conv2D(
+        self.layer_query_proj = layers.Conv2D(
             self._num_heads * self._key_dim,  # filters
             1,  # kernel_size
             use_bias=self._use_bias,
@@ -342,7 +338,7 @@ class MHAPool2D(tf.keras.layers.Layer):
             name="query_proj",
         )
 
-        self.layer_key_proj = tf.keras.layers.Conv2D(
+        self.layer_key_proj = layers.Conv2D(
             self._num_heads * self._key_dim,  # filters
             1,  # kernel_size
             use_bias=self._use_bias,
@@ -356,7 +352,7 @@ class MHAPool2D(tf.keras.layers.Layer):
             name="key_proj",
         )
 
-        self.layer_value_proj = tf.keras.layers.Conv2D(
+        self.layer_value_proj = layers.Conv2D(
             self._num_heads * self._value_dim,  # filters
             1,  # kernel_size
             use_bias=self._use_bias,
@@ -370,9 +366,9 @@ class MHAPool2D(tf.keras.layers.Layer):
             name="value_proj",
         )
 
-        self.layer_softmax = tf.keras.layers.Softmax(axis=3)
+        self.layer_softmax = layers.Softmax(axis=3)
         if self._dropout > 0:
-            self.layer_dropout = tf.keras.layers.Dropout(rate=self._dropout)
+            self.layer_dropout = layers.Dropout(rate=self._dropout)
 
     def call(self, blob, training=None, return_attention_scores: bool = False):
         """The call function.
@@ -464,19 +460,13 @@ class MHAPool2D(tf.keras.layers.Layer):
             "pooling": self._pooling,
             "pool_size": self._pool_size,
             "use_bias": self._use_bias,
-            "activation": tf.keras.activations.serialize(self._activation),
-            "kernel_initializer": tf.keras.initializers.serialize(
-                self._kernel_initializer
-            ),
-            "bias_initializer": tf.keras.initializers.serialize(self._bias_initializer),
-            "kernel_regularizer": tf.keras.regularizers.serialize(
-                self._kernel_regularizer
-            ),
-            "bias_regularizer": tf.keras.regularizers.serialize(self._bias_regularizer),
-            "kernel_constraint": tf.keras.constraints.serialize(
-                self._kernel_constraint
-            ),
-            "bias_constraint": tf.keras.constraints.serialize(self._bias_constraint),
+            "activation": activations.serialize(self._activation),
+            "kernel_initializer": initializers.serialize(self._kernel_initializer),
+            "bias_initializer": initializers.serialize(self._bias_initializer),
+            "kernel_regularizer": regularizers.serialize(self._kernel_regularizer),
+            "bias_regularizer": regularizers.serialize(self._bias_regularizer),
+            "kernel_constraint": constraints.serialize(self._kernel_constraint),
+            "bias_constraint": constraints.serialize(self._bias_constraint),
             "dropout": self._dropout,
         }
         base_config = super(MHAPool2D, self).get_config()

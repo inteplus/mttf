@@ -1,4 +1,4 @@
-from ..base import layers
+from mt.keras_src import layers
 
 
 class Identical(layers.Layer):

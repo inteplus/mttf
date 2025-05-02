@@ -1,4 +1,4 @@
-from ..base import applications as _applications
+from mt.keras_src import applications as _applications
 
 for _x, _y in _applications.__dict__.items():
     if _x.startswith("_"):

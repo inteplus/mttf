@@ -20,7 +20,7 @@ def init():
         )
 
     # add mobilenet_v3_split module
-    from .keras_applications import mobilenet_v3_split, mobilevit
+    from mt.keras_applications import mobilenet_v3_split, mobilevit
 
     setattr(tensorflow.keras.applications, "mobilenet_v3_split", mobilenet_v3_split)
     setattr(tensorflow.keras.applications, "mobilevit", mobilevit)
@@ -32,7 +32,7 @@ def init():
         mobilenet_v3_split.MobileNetV3Split,
     )
 
-    from .keras_layers import Identical, Upsize2D, Downsize2D
+    from mt.keras.layers import Identical, Upsize2D, Downsize2D
 
     setattr(tensorflow.keras.layers, "Identical", Identical)
     setattr(tensorflow.keras.layers, "Upsize2D", Upsize2D)

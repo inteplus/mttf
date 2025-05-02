@@ -1,6 +1,6 @@
-from ..base import layers
+from ..base import layers as base_layers
 
-for x, y in layers.__dict__.items():
+for x, y in base_layers.__dict__.items():
     globals()[x] = y
 
 from .identical import *

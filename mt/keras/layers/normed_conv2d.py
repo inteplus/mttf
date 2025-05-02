@@ -1,10 +1,10 @@
-import tensorflow.keras as tk
+from ..base import layers, initializers, regularizers, constraints
 
 
 from .counter import Counter
 
 
-class NormedConv2D(tk.layers.Layer):
+class NormedConv2D(layers.Layer):
     """A block of Conv2D without activation, followed by LayerNormalization, then activation.
 
     This layer represents the following block:
@@ -171,7 +171,7 @@ class NormedConv2D(tk.layers.Layer):
         for key in self.keys:
             setattr(self, key, locals()[key])
 
-        self.conv2d = tk.layers.Conv2D(
+        self.conv2d = layers.Conv2D(
             filters,
             kernel_size,
             strides=strides,
@@ -188,7 +188,7 @@ class NormedConv2D(tk.layers.Layer):
 
         self.counter = Counter()
 
-        self.norm = tk.layers.LayerNormalization(
+        self.norm = layers.LayerNormalization(
             axis=-1,
             epsilon=epsilon,
             scale=True,
@@ -202,7 +202,7 @@ class NormedConv2D(tk.layers.Layer):
         )
 
         if activation is not None:
-            self.acti = tk.layers.Activation(activation)
+            self.acti = layers.Activation(activation)
 
     def call(self, x, training: bool = False):
         count = self.counter(x, training=training)
@@ -215,7 +215,7 @@ class NormedConv2D(tk.layers.Layer):
         w = self.acti(z, training=training)
         return w
 
-    call.__doc__ = tk.layers.Layer.call.__doc__
+    call.__doc__ = layers.Layer.call.__doc__
 
     def get_config(self):
         config = {key: getattr(self, key) for key in self.keys}
@@ -224,17 +224,17 @@ class NormedConv2D(tk.layers.Layer):
             key = prefix + "_initializer"
             value = config[key]
             if not isinstance(value, str):
-                value = tk.initializers.serialize(value)
+                value = initializers.serialize(value)
             config[key] = value
             key = prefix + "_regularizer"
             value = config[key]
             if not isinstance(value, str):
-                value = tk.regularizers.serialize(value)
+                value = regularizers.serialize(value)
             config[key] = value
             key = prefix + "_constraint"
             value = config[key]
             if not isinstance(value, str):
-                value = tk.constraints.serialize(value)
+                value = constraints.serialize(value)
             config[key] = value
         config = {key: value for key, value in config.items() if value is not None}
         base_config = super(NormedConv2D, self).get_config()

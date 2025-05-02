@@ -1,12 +1,12 @@
 import tensorflow as tf
-import tensorflow.keras as tk
+from ..base import layers, initializers
 
 
-class Counter(tk.layers.Layer):
+class Counter(layers.Layer):
     """A layer that counts from 0 during training and does nothing during inference."""
 
     def build(self, input_shape):
-        initializer = tk.initializers.Constant(value=0.0)
+        initializer = initializers.Constant(value=0.0)
         self.counter = self.add_weight(
             name="counter", shape=(1,), initializer=initializer
         )
@@ -19,9 +19,9 @@ class Counter(tk.layers.Layer):
         y = tf.stop_gradient(y) * 0.0
         return self.counter + y
 
-    call.__doc__ = tk.layers.Layer.call.__doc__
+    call.__doc__ = layers.Layer.call.__doc__
 
     def compute_output_shape(self, input_shape):
         return (1,)
 
-    compute_output_shape.__doc__ = tk.layers.Layer.compute_output_shape.__doc__
+    compute_output_shape.__doc__ = layers.Layer.compute_output_shape.__doc__

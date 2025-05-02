@@ -1,8 +1,9 @@
 """Module involves upsizing and downsizing images in each axis individually using convolutions of residuals."""
 
-import tensorflow as tf
-
 from mt import tp, np
+
+import tensorflow as tf
+from ..base import layers, initializers, regularizers, constraints
 
 
 def mirror_all_weights(l_weights: list) -> list:
@@ -27,7 +28,7 @@ def mirror_all_weights(l_weights: list) -> list:
     return l_newWeights
 
 
-class DUCLayer(tf.keras.layers.Layer):
+class DUCLayer(layers.Layer):
     """Base layer for all DUC layer implementations.
 
     Parameters
@@ -65,33 +66,27 @@ class DUCLayer(tf.keras.layers.Layer):
         super(DUCLayer, self).__init__(**kwargs)
 
         self._kernel_size = kernel_size
-        self._kernel_initializer = tf.keras.initializers.get(kernel_initializer)
-        self._bias_initializer = tf.keras.initializers.get(bias_initializer)
-        self._kernel_regularizer = tf.keras.regularizers.get(kernel_regularizer)
-        self._bias_regularizer = tf.keras.regularizers.get(bias_regularizer)
-        self._kernel_constraint = tf.keras.constraints.get(kernel_constraint)
-        self._bias_constraint = tf.keras.constraints.get(bias_constraint)
+        self._kernel_initializer = initializers.get(kernel_initializer)
+        self._bias_initializer = initializers.get(bias_initializer)
+        self._kernel_regularizer = regularizers.get(kernel_regularizer)
+        self._bias_regularizer = regularizers.get(bias_regularizer)
+        self._kernel_constraint = constraints.get(kernel_constraint)
+        self._bias_constraint = constraints.get(bias_constraint)
 
     def get_config(self):
         config = {
             "kernel_size": self._kernel_size,
-            "kernel_initializer": tf.keras.initializers.serialize(
-                self._kernel_initializer
-            ),
-            "bias_initializer": tf.keras.initializers.serialize(self._bias_initializer),
-            "kernel_regularizer": tf.keras.regularizers.serialize(
-                self._kernel_regularizer
-            ),
-            "bias_regularizer": tf.keras.regularizers.serialize(self._bias_regularizer),
-            "kernel_constraint": tf.keras.constraints.serialize(
-                self._kernel_constraint
-            ),
-            "bias_constraint": tf.keras.constraints.serialize(self._bias_constraint),
+            "kernel_initializer": initializers.serialize(self._kernel_initializer),
+            "bias_initializer": initializers.serialize(self._bias_initializer),
+            "kernel_regularizer": regularizers.serialize(self._kernel_regularizer),
+            "bias_regularizer": regularizers.serialize(self._bias_regularizer),
+            "kernel_constraint": constraints.serialize(self._kernel_constraint),
+            "bias_constraint": constraints.serialize(self._bias_constraint),
         }
         base_config = super(DUCLayer, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
-    get_config.__doc__ = tf.keras.layers.Layer.get_config.__doc__
+    get_config.__doc__ = layers.Layer.get_config.__doc__
 
     def get_mirrored_weights(self):
         return mirror_all_weights(self.get_weights())
@@ -166,8 +161,8 @@ class Upsize2D(DUCLayer):
         self._expansion_factor = expansion_factor
 
         if self._expansion_factor > 1:
-            self.prenorm1_layer = tf.keras.layers.LayerNormalization(name="prenorm1")
-            self.expansion_layer = tf.keras.layers.Conv2D(
+            self.prenorm1_layer = layers.LayerNormalization(name="prenorm1")
+            self.expansion_layer = layers.Conv2D(
                 self._input_dim * 2 * expansion_factor,
                 self._kernel_size,
                 padding="same",
@@ -180,8 +175,8 @@ class Upsize2D(DUCLayer):
                 bias_constraint=self._bias_constraint,
                 name="expand",
             )
-        self.prenorm2_layer = tf.keras.layers.LayerNormalization(name="prenorm2")
-        self.projection_layer = tf.keras.layers.Conv2D(
+        self.prenorm2_layer = layers.LayerNormalization(name="prenorm2")
+        self.projection_layer = layers.Conv2D(
             self._input_dim * 2,
             self._kernel_size,
             padding="same",
@@ -332,8 +327,8 @@ class Downsize2D(DUCLayer):
         self._expansion_factor = expansion_factor
 
         if self._expansion_factor > 1:
-            self.prenorm1_layer = tf.keras.layers.LayerNormalization(name="prenorm1")
-            self.expansion_layer = tf.keras.layers.Conv2D(
+            self.prenorm1_layer = layers.LayerNormalization(name="prenorm1")
+            self.expansion_layer = layers.Conv2D(
                 self._input_dim * 4 * self._expansion_factor,
                 self._kernel_size,
                 padding="same",
@@ -346,8 +341,8 @@ class Downsize2D(DUCLayer):
                 bias_constraint=self._bias_constraint,
                 name="expand",
             )
-        self.prenorm2_layer = tf.keras.layers.LayerNormalization(name="prenorm2")
-        self.projection_layer = tf.keras.layers.Conv2D(
+        self.prenorm2_layer = layers.LayerNormalization(name="prenorm2")
+        self.projection_layer = layers.Conv2D(
             self._input_dim,
             self._kernel_size,
             padding="same",
@@ -523,8 +518,8 @@ class Downsize2D_V2(DUCLayer):
         self._projection_uses_bias = projection_uses_bias
 
         if self._expansion_factor > 1:
-            self.prenorm1_layer = tf.keras.layers.LayerNormalization(name="prenorm1")
-            self.expansion_layer = tf.keras.layers.Conv2D(
+            self.prenorm1_layer = layers.LayerNormalization(name="prenorm1")
+            self.expansion_layer = layers.Conv2D(
                 (self._img_dim + self._res_dim) * 4 * self._expansion_factor,
                 self._kernel_size,
                 padding="same",
@@ -537,8 +532,8 @@ class Downsize2D_V2(DUCLayer):
                 bias_constraint=self._bias_constraint,
                 name="expand",
             )
-        self.prenorm2_layer = tf.keras.layers.LayerNormalization(name="prenorm2")
-        self.projection_layer = tf.keras.layers.Conv2D(
+        self.prenorm2_layer = layers.LayerNormalization(name="prenorm2")
+        self.projection_layer = layers.Conv2D(
             self._img_dim + self._res_dim * 2,
             1,
             padding="same",
@@ -710,8 +705,8 @@ class Upsize2D_V2(DUCLayer):
         self._expansion_factor = expansion_factor
 
         if self._expansion_factor > 1:
-            self.prenorm1_layer = tf.keras.layers.LayerNormalization(name="prenorm1")
-            self.expansion_layer = tf.keras.layers.Conv2D(
+            self.prenorm1_layer = layers.LayerNormalization(name="prenorm1")
+            self.expansion_layer = layers.Conv2D(
                 (self._img_dim + self._res_dim) * 2 * expansion_factor,
                 self._kernel_size,
                 padding="same",
@@ -724,8 +719,8 @@ class Upsize2D_V2(DUCLayer):
                 bias_constraint=self._bias_constraint,
                 name="expand",
             )
-        self.prenorm2_layer = tf.keras.layers.LayerNormalization(name="prenorm2")
-        self.projection_layer = tf.keras.layers.Conv2D(
+        self.prenorm2_layer = layers.LayerNormalization(name="prenorm2")
+        self.projection_layer = layers.Conv2D(
             (self._img_dim + self._res_dim) * 2,
             self._kernel_size if self._expansion_factor <= 1 else 1,
             padding="same",
@@ -875,10 +870,8 @@ class Downsize2D_V3(DUCLayer):
 
         if res_dim > 0:
             if res_dim > img_dim:
-                self.prenorm1_layer = tf.keras.layers.LayerNormalization(
-                    name="prenorm1"
-                )
-                self.expand1_layer = tf.keras.layers.Conv2D(
+                self.prenorm1_layer = layers.LayerNormalization(name="prenorm1")
+                self.expand1_layer = layers.Conv2D(
                     img_dim * 2 + res_dim * 4,
                     self._kernel_size,
                     padding="same",
@@ -892,8 +885,8 @@ class Downsize2D_V3(DUCLayer):
                     name="expand1",
                 )
             RR = (img_dim + res_dim * 3 + 1) // 2
-            self.prenorm2_layer = tf.keras.layers.LayerNormalization(name="prenorm2")
-            self.project1_layer = tf.keras.layers.Conv2D(
+            self.prenorm2_layer = layers.LayerNormalization(name="prenorm2")
+            self.project1_layer = layers.Conv2D(
                 RR,
                 1,
                 padding="same",
@@ -906,8 +899,8 @@ class Downsize2D_V3(DUCLayer):
                 bias_constraint=self._bias_constraint,
                 name="project1",
             )
-            self.prenorm3_layer = tf.keras.layers.LayerNormalization(name="prenorm3")
-            self.expand2_layer = tf.keras.layers.Conv2D(
+            self.prenorm3_layer = layers.LayerNormalization(name="prenorm3")
+            self.expand2_layer = layers.Conv2D(
                 img_dim * 2 + RR * 4,
                 self._kernel_size,
                 padding="same",
@@ -920,8 +913,8 @@ class Downsize2D_V3(DUCLayer):
                 bias_constraint=self._bias_constraint,
                 name="expand2",
             )
-        self.prenorm4_layer = tf.keras.layers.LayerNormalization(name="prenorm4")
-        self.project2_layer = tf.keras.layers.Conv2D(
+        self.prenorm4_layer = layers.LayerNormalization(name="prenorm4")
+        self.project2_layer = layers.Conv2D(
             img_dim + res_dim * 2,
             1,
             padding="same",
@@ -1174,10 +1167,8 @@ class DownsizeX2D(DUCLayerV5):
 
         if res_dim > 0:
             if res_dim > img_dim:
-                self.prenorm1_layer = tf.keras.layers.LayerNormalization(
-                    name="prenorm1"
-                )
-                self.expand1_layer = tf.keras.layers.Conv2D(
+                self.prenorm1_layer = layers.LayerNormalization(name="prenorm1")
+                self.expand1_layer = layers.Conv2D(
                     (self.I + self.R) * 4,
                     self._kernel_size,
                     padding="same",
@@ -1190,8 +1181,8 @@ class DownsizeX2D(DUCLayerV5):
                     bias_constraint=self._bias_constraint,
                     name="expand1",
                 )
-            self.prenorm2_layer = tf.keras.layers.LayerNormalization(name="prenorm2")
-            self.project1_layer = tf.keras.layers.Conv2D(
+            self.prenorm2_layer = layers.LayerNormalization(name="prenorm2")
+            self.project1_layer = layers.Conv2D(
                 self.RX,
                 1,
                 padding="same",
@@ -1298,8 +1289,8 @@ class UpsizeX2D(DUCLayerV5):
         )
 
         if res_dim > 0:
-            self.prenorm1_layer = tf.keras.layers.LayerNormalization(name="prenorm1")
-            self.expand1_layer = tf.keras.layers.Conv2D(
+            self.prenorm1_layer = layers.LayerNormalization(name="prenorm1")
+            self.expand1_layer = layers.Conv2D(
                 (self.I + self.R) * 4,
                 self._kernel_size,
                 padding="same",
@@ -1312,8 +1303,8 @@ class UpsizeX2D(DUCLayerV5):
                 bias_constraint=self._bias_constraint,
                 name="expand1",
             )
-            self.prenorm2_layer = tf.keras.layers.LayerNormalization(name="prenorm2")
-            self.project1_layer = tf.keras.layers.Conv2D(
+            self.prenorm2_layer = layers.LayerNormalization(name="prenorm2")
+            self.project1_layer = layers.Conv2D(
                 self.R,
                 1,
                 padding="same",
@@ -1326,7 +1317,7 @@ class UpsizeX2D(DUCLayerV5):
                 bias_constraint=self._bias_constraint,
                 name="project1",
             )
-            self.project2_layer = tf.keras.layers.Conv2D(
+            self.project2_layer = layers.Conv2D(
                 self.I + self.R,
                 1,
                 padding="same",
@@ -1429,8 +1420,8 @@ class DownsizeY2D(DUCLayerV5):
         )
 
         if self.R > 0:
-            self.prenorm1_layer = tf.keras.layers.LayerNormalization(name="prenorm1")
-            self.expand1_layer = tf.keras.layers.Conv2D(
+            self.prenorm1_layer = layers.LayerNormalization(name="prenorm1")
+            self.expand1_layer = layers.Conv2D(
                 (self.I + self.RX) * 4,
                 self._kernel_size,
                 padding="same",
@@ -1443,8 +1434,8 @@ class DownsizeY2D(DUCLayerV5):
                 bias_constraint=self._bias_constraint,
                 name="expand1",
             )
-        self.prenorm2_layer = tf.keras.layers.LayerNormalization(name="prenorm2")
-        self.project1_layer = tf.keras.layers.Conv2D(
+        self.prenorm2_layer = layers.LayerNormalization(name="prenorm2")
+        self.project1_layer = layers.Conv2D(
             self.RY,
             1,
             padding="same",
@@ -1547,8 +1538,8 @@ class UpsizeY2D(DUCLayerV5):
             **kwargs
         )
 
-        self.prenorm1_layer = tf.keras.layers.LayerNormalization(name="prenorm1")
-        self.expand1_layer = tf.keras.layers.Conv2D(
+        self.prenorm1_layer = layers.LayerNormalization(name="prenorm1")
+        self.expand1_layer = layers.Conv2D(
             (self.I + self.RX) * 4,
             self._kernel_size,
             padding="same",
@@ -1561,8 +1552,8 @@ class UpsizeY2D(DUCLayerV5):
             bias_constraint=self._bias_constraint,
             name="expand1",
         )
-        self.prenorm2_layer = tf.keras.layers.LayerNormalization(name="prenorm2")
-        self.project1_layer = tf.keras.layers.Conv2D(
+        self.prenorm2_layer = layers.LayerNormalization(name="prenorm2")
+        self.project1_layer = layers.Conv2D(
             self.RX,
             1,
             padding="same",
@@ -1575,7 +1566,7 @@ class UpsizeY2D(DUCLayerV5):
             bias_constraint=self._bias_constraint,
             name="project1",
         )
-        self.project2_layer = tf.keras.layers.Conv2D(
+        self.project2_layer = layers.Conv2D(
             self.I + self.RX,
             1,
             padding="same",

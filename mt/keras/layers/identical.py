@@ -1,15 +1,15 @@
-import tensorflow.keras.layers as _kl
+from ..base import layers
 
 
-class Identical(_kl.Layer):
+class Identical(layers.Layer):
     """An identical layer, mainly for renaming purposes."""
 
     def call(self, x):
         return x
 
-    call.__doc__ = _kl.Layer.call.__doc__
+    call.__doc__ = layers.Layer.call.__doc__
 
     def compute_output_shape(self, input_shape):
         return input_shape
 
-    compute_output_shape.__doc__ = _kl.Layer.compute_output_shape.__doc__
+    compute_output_shape.__doc__ = layers.Layer.compute_output_shape.__doc__

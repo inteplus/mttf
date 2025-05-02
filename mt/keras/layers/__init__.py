@@ -1,7 +1,9 @@
-from ..base import layers as base_layers
+from ..base import layers as _layers
 
-for x, y in base_layers.__dict__.items():
-    globals()[x] = y
+for _x, _y in _layers.__dict__.items():
+    if x.startswith("_"):
+        continue
+    globals()[_x] = _y
 
 from .identical import *
 from .floor import *

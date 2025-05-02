@@ -2,7 +2,7 @@
 
 from mt import tp
 
-from ..utils import NameScope
+from mt.tf.utils import NameScope
 
 
 def conv2d(name_scope: NameScope, x, filters, kernel_size, **kwargs):

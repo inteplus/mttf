@@ -4,7 +4,7 @@ for _x, _y in _layers.__dict__.items():
     if _x.startswith("_"):
         continue
     globals()[_x] = _y
-globals.__doc__ = _layers.__doc__
+__doc__ = _layers.__doc__
 
 from .identical import *
 from .floor import *

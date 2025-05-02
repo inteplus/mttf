@@ -55,13 +55,13 @@ elif base.keras_source == "keras":
         _inverted_res_block,
     )
     from keras import backend, models
+
     try:
         from keras.layers import VersionAwareLayers
 
         layers = VersionAwareLayers()
     except ImportError:
-        try:
-            from keras import layers
+        from keras import layers
     from keras.utils import data_utils, layer_utils
 elif base.keras_source == "tensorflow.keras":
     from tensorflow.keras.src.applications.mobilenet_v3 import (
@@ -71,13 +71,13 @@ elif base.keras_source == "tensorflow.keras":
         _inverted_res_block,
     )
     from tensorflow.python.keras import backend, models
+
     try:
         from tensorflow.keras.layers import VersionAwareLayers
 
         layers = VersionAwareLayers()
     except ImportError:
-        try:
-            from tensorflow.keras import layers
+        from tensorflow.keras import layers
     from tensorflow.python.keras.utils import data_utils, layer_utils
 else:
     raise ImportError(f"Unknown value '{keras_source}' for variable 'keras_source'.")

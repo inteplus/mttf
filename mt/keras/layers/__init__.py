@@ -1,3 +1,8 @@
+from ..base import layers
+
+for x, y in layers.__dict__.items():
+    globals()[x] = y
+
 from .identical import *
 from .floor import *
 from .var_regularizer import *

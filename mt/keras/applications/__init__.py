@@ -9,7 +9,8 @@ __doc__ = _applications.__doc__
 from .mobilenet_v3_split import (
     MobileNetV3Input,
     MobileNetV3Parser,
-    MobileNetV3Block,
+    MobileNetV3SmallBlock,
+    MobileNetV3LargeBlock,
     MobileNetV3Mixer,
     MobileNetV3Output,
     MobileNetV3Split,
@@ -21,7 +22,8 @@ from .mobilevit import create_mobilevit
 __api__ = [
     "MobileNetV3Input",
     "MobileNetV3Parser",
-    "MobileNetV3Block",
+    "MobileNetV3SmallBlock",
+    "MobileNetV3LargeBlock",
     "MobileNetV3Mixer",
     "MobileNetV3Output",
     "MobileNetV3Split",

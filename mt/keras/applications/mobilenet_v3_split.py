@@ -39,7 +39,7 @@ from .. import base
 
 
 if base.keras_source == "tf_keras":
-    from tf_keras.applications.mobilenet_v3 import (
+    from tf_keras.src.applications.mobilenet_v3 import (
         relu,
         hard_swish,
         _depth,
@@ -48,12 +48,20 @@ if base.keras_source == "tf_keras":
     from tf_keras import backend, models, layers
     from tensorflow.python.keras.utils import data_utils, layer_utils
 elif base.keras_source == "keras":
-    from keras.applications.mobilenet_v3 import (
-        relu,
-        hard_swish,
-        _depth,
-        _inverted_res_block,
-    )
+    try:
+        from keras.applications.mobilenet_v3 import (
+            relu,
+            hard_swish,
+            _depth,
+            _inverted_res_block,
+        )
+    except ImportError:
+        from keras.src.applications.mobilenet_v3 import (
+            relu,
+            hard_swish,
+            _depth,
+            _inverted_res_block,
+        )
     from keras import backend, models
 
     try:

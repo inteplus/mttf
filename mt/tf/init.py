@@ -20,7 +20,7 @@ def init():
         )
 
     # add mobilenet_v3_split module
-    from mt.keras_applications import mobilenet_v3_split, mobilevit
+    from mt.keras.applications import mobilenet_v3_split, mobilevit
 
     setattr(tensorflow.keras.applications, "mobilenet_v3_split", mobilenet_v3_split)
     setattr(tensorflow.keras.applications, "mobilevit", mobilevit)

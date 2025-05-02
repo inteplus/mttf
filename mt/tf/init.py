@@ -1,6 +1,6 @@
 """Initialises TensorFlow, monkey-patching if necessary."""
 
-from packaging import version
+from packaging.version import Version
 
 __all__ = ["init"]
 
@@ -11,9 +11,9 @@ def init():
     import tensorflow
     import sys
 
-    tf_ver = version.parse(tensorflow.__version__)
+    tf_ver = Version(tensorflow.__version__)
 
-    if tf_ver < version.parse("2.8"):
+    if tf_ver < Version("2.8"):
         raise ImportError(
             f"The minimum TF version that mttf supports is 2.8. Your TF is {tf_ver}. "
             "Please upgrade."

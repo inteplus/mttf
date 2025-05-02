@@ -33,10 +33,11 @@ no pre-trained weights exist.
 """
 
 
-from mt import tp, tfc, keras_src
+from mt import tp, tfc
+from .. import keras_source
 
 
-if keras_src.keras_source == "tf_keras":
+if keras_source == "tf_keras":
     from tf_keras.src.applications.mobilenet_v3 import (
         relu,
         hard_swish,
@@ -45,7 +46,7 @@ if keras_src.keras_source == "tf_keras":
     )
     from tf_keras import backend, models, layers
     from tensorflow.python.keras.utils import data_utils, layer_utils
-elif keras_src.keras_source == "keras":
+elif keras_source == "keras":
     try:
         from keras.applications.mobilenet_v3 import (
             relu,
@@ -69,7 +70,7 @@ elif keras_src.keras_source == "keras":
     except ImportError:
         from keras import layers
     from keras.utils import data_utils, layer_utils
-elif keras_src.keras_source == "tensorflow.keras":
+elif keras_source == "tensorflow.keras":
     from tensorflow.keras.src.applications.mobilenet_v3 import (
         relu,
         hard_swish,

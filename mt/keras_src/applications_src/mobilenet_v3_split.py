@@ -298,7 +298,7 @@ def MobileNetV3Mixer(
                 "mt.tfc.MHAPool2DCascadeParams. Got: {}.".format(type(mhapool_params))
             )
 
-        from ..keras_layers import MHAPool2D
+        from ..layers_src import MHAPool2D
 
         n_heads = mhapool_params.n_heads
         k = 0

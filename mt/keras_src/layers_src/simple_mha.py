@@ -20,7 +20,7 @@ import tensorflow as tf
 from tensorflow.python.util.tf_export import keras_export
 
 from mt import tp, tfc
-from .. import layers, initializers, regularizers, constraints
+from .. import layers, initializers, regularizers, constraints, activations
 
 
 @keras_export("keras.layers.SimpleMHA2D")

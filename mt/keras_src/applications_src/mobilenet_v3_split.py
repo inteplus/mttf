@@ -45,7 +45,6 @@ if keras_source == "tf_keras":
         _inverted_res_block,
     )
     from tf_keras import backend, models, layers
-    from tensorflow.python.keras.utils import layer_utils
 elif keras_source == "keras":
     try:
         from keras.applications.mobilenet_v3 import (
@@ -69,10 +68,6 @@ elif keras_source == "keras":
         layers = VersionAwareLayers()
     except ImportError:
         from keras import layers
-    try:
-        from keras.utils import layer_utils
-    except ImportError:
-        from keras.src.utils import layer_utils
 elif keras_source == "tensorflow.keras":
     from tensorflow.keras.src.applications.mobilenet_v3 import (
         relu,
@@ -88,7 +83,6 @@ elif keras_source == "tensorflow.keras":
         layers = VersionAwareLayers()
     except ImportError:
         from tensorflow.keras import layers
-    from tensorflow.python.keras.utils import layer_utils
 else:
     raise ImportError(f"Unknown value '{keras_source}' for variable 'keras_source'.")
 

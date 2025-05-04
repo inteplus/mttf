@@ -69,7 +69,10 @@ elif keras_source == "keras":
         layers = VersionAwareLayers()
     except ImportError:
         from keras import layers
-    from keras.utils import data_utils, layer_utils
+    try:
+        from keras.utils import data_utils, layer_utils
+    except ImportError:
+        from keras.src.utils import dara_utils, layer_utils
 elif keras_source == "tensorflow.keras":
     from tensorflow.keras.src.applications.mobilenet_v3 import (
         relu,

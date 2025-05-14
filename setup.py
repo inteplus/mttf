@@ -12,9 +12,8 @@ setup(
     packages=find_namespace_packages(include=["mt.*"]),
     install_requires=[
         # 'tensorflow', 'tensorflow-cpu' or 'tensorflow-gpu'
-        "numpy<2",  # to ensure current TF (up to v2.19) stays with numpy 1
         "pyyaml",
-        "mtbase>=4.32.3",  # to rely on uv
+        "mtbase>=4.32.7",  # to rely on uv
         "mtnet>=0.3.2",  # just updating
     ],
     scripts=[

@@ -28,6 +28,7 @@ async def main():
     l_endpoints = [
         ("192.168.110.4", 443),
         ("nexus.winnow.tech", 443),
+        ("172.17.0.1", 5443),
     ]
 
     for host, port in l_endpoints:
@@ -42,20 +43,8 @@ async def main():
             returncode = await process.wait()
             sys.exit(returncode)
 
-    u, p = tfc.make_debug_list()
-
-    if u[4] != p[5]:
-        logg.logger.error("Unable to connect to nexus.")
-        sys.exit(1)
-
-    with sshtunnel.open_tunnel(
-        ("clujdc.edge.winnowsolutions.com", 22222),
-        ssh_username=u,
-        ssh_password=p,
-        remote_bind_address=("192.168.110.4", 443),
-        local_bind_address=("0.0.0.0", 5443),
-    ) as tun:
-        execute(argv)
+    logg.logger.error("Unable to connect to nexus.")
+    sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 from .. import constraints as _constraints
 
-for _x, _y in _layers.__dict__.items():
+for _x, _y in _constraints.__dict__.items():
     if _x.startswith("_"):
         continue
     globals()[_x] = _y

@@ -1,7 +1,7 @@
 from .. import constraints
 
 
-class CenterAround(keras.constraints.Constraint):
+class CenterAround(constraints.Constraint):
     """Constrains weight tensors to be centered around `ref_value`."""
 
     def __init__(self, ref_value: float = 0.0):

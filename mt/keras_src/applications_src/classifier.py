@@ -43,6 +43,8 @@ def create_classifier_block(
 
         x = bv_feats = layers.Input(shape=(input_dim,), name=name_scope("input"))
 
+        x = layers.LayerNormalization(name=name_scope("prenorm"))(x)
+
         # dropout, optional
         dropout = getattr(params, "dropout", None)
         if dropout is not None and dropout > 0 and dropout < 1:

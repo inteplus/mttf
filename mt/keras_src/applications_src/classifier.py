@@ -86,7 +86,7 @@ def create_classifier_block(
             bias_constraint=bias_constraint,
         )(x)
 
-        bv_probs = x = keras.layers.Softmax(name=name_scope("probs"))(x)
+        bv_probs = x = layers.Softmax(name=name_scope("probs"))(x)
 
         # model
         model = models.Model(bv_feats, [bv_logits, bv_probs], name=name)

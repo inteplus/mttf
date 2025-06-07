@@ -39,13 +39,14 @@ def create_classifier_block(
 
     msg = f"Creating a classifier block of {n_classes} classes"
     with logg.scoped_info(msg, logger=logger):
-        x = bv_feats = layers.Input(shape=(input_dim,))
         name_scope = tfc.NameScope(name)
+
+        x = bv_feats = layers.Input(shape=(input_dim,), name=name_scope("input"))
 
         # dropout, optional
         dropout = getattr(params, "dropout", None)
         if dropout is not None and dropout > 0 and dropout < 1:
-            x = layers.Dropout(dropout)(x)
+            x = layers.Dropout(dropout, name=name_scope("dropout"))(x)
 
         # Object classification branch
         # MT-TODO: currently l2_coeff does not take into account batch size. In order to be truly

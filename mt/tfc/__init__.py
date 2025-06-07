@@ -11,6 +11,7 @@ __all__ = [
     "MHAParams",
     "MHAPool2DCascadeParams",
     "MobileNetV3MixerParams",
+    "ClassifierParams",
     "make_debug_list",
     "NameScope",
 ]
@@ -246,6 +247,63 @@ class MobileNetV3MixerParams(ModelParams):
             variant=json_obj["variant"],
             mhapool_cascade_params=mhapool_params,
             gen=json_obj["gen"],
+        )
+
+
+class ClassifierParams(ModelParams):
+    """Parameters for creating a Classifer block.
+
+    The classifier takes a feature vector as input and returns a logit vector and a softmax vector
+    as output.
+
+    Parameters
+    ----------
+    zero_mean_logit_biases : bool
+        If True, the logit biases of the Dense layer is constrained to have mean equal to zero.
+    l2_coeff : float, optional
+        the coefficient associated with the L2 regularizer of each weight component of the Dense
+        kernel matrix and bias vector. This is equal to `weight_decay` times the embedding
+        dimensionality times the number of output classes. Value 0.1 is good. At the moment the
+        value is still dependent on the batch size though. If not provided, there is no regularizer
+        applied to the kernel matrix and the bias vector.
+    dropout : float, optional
+        dropout coefficient. Value 0.2 is good. If provided, a Dropout layer is included.
+    gen : int
+        model generation/family number, starting from 1
+    """
+
+    yaml_tag = "!ClassifierParams"
+
+    def __init__(
+        self,
+        zero_mean_logit_biases: bool = False,
+        l2_coeff: tp.Optional[float] = None,
+        dropout: tp.Optional[float] = None,
+        gen: int = 1,
+    ):
+        super().__init__(gen=gen)
+
+        self.zero_mean_logit_biases = zero_mean_logit_biases
+        self.l2_coeff = l2_coeff
+        self.dropout = dropout
+
+    def to_json(self) -> dict:
+        """Returns an equivalent json object."""
+        return {
+            "zero_mean_logit_biases": getattr(self, "zero_mean_logit_biases", False),
+            "l2_coeff": getattr(self, "l2_coeff", None),
+            "dropout": getattr(self, "dropout", None),
+            "gen": getattr(self, "gen", 1),
+        }
+
+    @classmethod
+    def from_json(cls, json_obj: dict) -> "ClassifierParams":
+        """Instantiates from a json object."""
+        return ClassifierParams(
+            zero_mean_logit_biases=json_obj.get("zero_mean_logit_biases", False),
+            l2_coeff=json_obj.get("l2_coeff", None),
+            dropout=json_obj.get("dropout", None),
+            gen=json_obj.get("gen", 1),
         )
 
 

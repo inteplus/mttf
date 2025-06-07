@@ -17,6 +17,7 @@ from .mobilenet_v3_split import (
 )
 
 from .mobilevit import create_mobilevit
+from .classifier import create_classifier_block
 
 
 __api__ = [
@@ -28,4 +29,5 @@ __api__ = [
     "MobileNetV3Output",
     "MobileNetV3Split",
     "create_mobilevit",
+    "create_classifier_block",
 ]

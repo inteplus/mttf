@@ -9,7 +9,7 @@ from ..constraints_src import CenterAround
 
 
 def create_classifier_block(
-    bv_feats,
+    input_dim: int,
     n_classes: int,
     name: str = "dense_classifier",
     params: tfc.ClassifierParams = tfc.ClassifierParams(),
@@ -19,9 +19,8 @@ def create_classifier_block(
 
     Parameters
     ----------
-    bv_feats : tensorflow.Tensor
-        a 2D tensor of shape `(B,D)` where `B` is the batch size and `D` is the feature
-        dimensionality
+    input_dim : int
+        feature dimensionality of the input tensor
     n_classes : int
         number of output classes
     name : str, optional
@@ -40,7 +39,7 @@ def create_classifier_block(
 
     msg = f"Creating a classifier block of {n_classes} classes"
     with logg.scoped_info(msg, logger=logger):
-        x = bv_feats
+        x = bv_feats = layers.Input((input_dim,))
         name_scope = tfc.NameScope(name)
 
         # dropout, optional

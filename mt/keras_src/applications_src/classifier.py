@@ -39,7 +39,7 @@ def create_classifier_block(
 
     msg = f"Creating a classifier block of {n_classes} classes"
     with logg.scoped_info(msg, logger=logger):
-        x = bv_feats = layers.Input((input_dim,))
+        x = bv_feats = layers.Input(shape=(input_dim,))
         name_scope = tfc.NameScope(name)
 
         # dropout, optional

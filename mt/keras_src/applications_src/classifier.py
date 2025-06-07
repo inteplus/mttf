@@ -78,7 +78,7 @@ def create_classifier_block(
             bias_constraint = None
 
         # dense layer
-        bv_logits = x = Dense(
+        bv_logits = x = layers.Dense(
             n_classes,
             name=name_scope("logits"),
             kernel_regularizer=kernel_regularizer,

@@ -1,8 +1,8 @@
-from .. import ops, backend
+from .. import layers
 
 
-class SoftBend(ops.Operation):
-    """Soft bend activation function.
+class SoftBend(layers.Layer):
+    """Soft bend activation layer.
 
     Function: `|x|^alpha * tanh(x)`, bending the linear activation a bit.
 
@@ -19,5 +19,9 @@ class SoftBend(ops.Operation):
 
         return pow(abs(x), self.alpha) * tanh(x)
 
-    def compute_output_spec(self, x):
-        return backend.KerasTensor(x.shape, x.dtype)
+    call.__doc__ = layers.Layer.call.__doc__
+
+    def compute_output_shape(self, input_shape):
+        return input_shape
+
+    compute_output_shape.__doc__ = layers.Layer.compute_output_shape.__doc__

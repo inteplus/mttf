@@ -3,6 +3,7 @@
 from mt.keras_src import *
 from mt.keras_src import (
     constraints_src as constraints,
+    activations_src as activations,
     layers_src as layers,
     applications_src as applications,
 )

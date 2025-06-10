@@ -9,9 +9,18 @@ class SoftBend(layers.Layer):
     If alpha is less than 1, it acts as a soft squash.
     If alpha is greater than 1, it acts as a soft explode.
     If alpha is 1, it acts as the linear activation function.
+
+    Parameters
+    ----------
+    alpha : float
+        the bending coefficient
+    **kwds : dict
+        keyword arguments passed as-is to the super class
     """
 
-    def __init__(self, alpha: float = 0.5):
+    def __init__(self, alpha: float = 0.5, **kwds):
+        super(SoftBend, self).__init__(**kwds)
+
         self.alpha = alpha
 
     def call(self, x):

@@ -13,7 +13,7 @@ setup(
     install_requires=[
         # 'tensorflow', 'tensorflow-cpu' or 'tensorflow-gpu'
         "pyyaml",
-        "mtbase>=4.32.7",  # to rely on uv
+        "mtbase>=4.33.0",  # to rely on uv
         "mtnet>=0.3.2",  # just updating
     ],
     scripts=[

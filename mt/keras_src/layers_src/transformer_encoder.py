@@ -4,7 +4,7 @@ from .. import layers, activations, initializers
 class MTTransformerEncoder(layers.Layer):
     """Transformer encoder.
 
-    This layer was ripped from [KerasHub]()https://github.com/keras-team/keras-hub/blob/master/keras_hub/src/layers/modeling/transformer_encoder.py)
+    This layer was ripped from [KerasHub](https://github.com/keras-team/keras-hub/blob/master/keras_hub/src/layers/modeling/transformer_encoder.py)
     by MT. It has been adapted and simplified to work with Keras 2. It does not
     take as input attention mask or padding mask, but instead computes them
     internally.

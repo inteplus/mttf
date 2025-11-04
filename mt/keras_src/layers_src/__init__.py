@@ -14,6 +14,7 @@ from .image_sizing import *
 from .counter import Counter
 from .normed_conv2d import NormedConv2D
 from .soft_bend import SoftBend
+from .transformer_encoder import MTTransformerEncoder
 from .utils import *
 
 
@@ -38,4 +39,5 @@ __api__ = [
     "conv2d",
     "dense2d",
     "SoftBend",
+    "MTTransformerEncoder",
 ]

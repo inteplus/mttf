@@ -2,7 +2,6 @@
 """
 
 from mt import tp, tfc, logg
-from .. import keras_source
 from .. import models, layers, regularizers
 
 from ..constraints_src import CenterAround

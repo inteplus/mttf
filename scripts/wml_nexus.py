@@ -3,9 +3,8 @@
 import asyncio
 import sys
 import subprocess
-import sshtunnel
 
-from mt import net, logg, tfc
+from mt import net, logg
 
 
 def execute(argv):

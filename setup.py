@@ -19,10 +19,11 @@ setup(
     scripts=[
         "scripts/wml_nexus.py",  # for accessing Winnow Nexus repo
         "scripts/pipi.sh",  # for pip-installing packages using uv
-        "scripts/wml_pipi.sh",  # for accessing Winnow Nexus repo
-        "scripts/wml_twineu.sh",  # for accessing Winnow Nexus repo
-        "scripts/dmt_pipi.sh",  # for accessing Winnow Nexus repo, MT dev environment
-        "scripts/dmt_twineu.sh",  # for accessing Winnow Nexus repo, MT dev environment
+        "scripts/wml_pipi.sh",  # for pip-installing packages using uv and Winnow Nexus repo
+        "scripts/user_pipi.sh",  # for pip-installing packages using uv and user-specific Winnow Nexus repo
+        "scripts/wml_twineu.sh",  # for uploading wheels to Winnow Nexus repo
+        "scripts/dmt_pipi.sh",  # for pip-installing packages using uv and Winnow Nexus repo, MT dev environment
+        "scripts/dmt_twineu.sh",  # for uploading wheels to Winnow Nexus repo, MT dev environment
     ],
     url="https://github.com/inteplus/mttf",
     project_urls={

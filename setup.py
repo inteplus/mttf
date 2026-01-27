@@ -21,6 +21,7 @@ setup(
         "scripts/pipi.sh",  # for pip-installing packages using uv
         "scripts/wml_pipi.sh",  # for pip-installing packages using uv and Winnow Nexus repo
         "scripts/user_pipi.sh",  # for pip-installing packages using uv and user-specific Winnow Nexus repo
+        "scripts/user_pipi.py",  # for pip-installing packages using uv and user-specific Winnow Nexus repo
         "scripts/dmt_pipi.sh",  # for pip-installing packages using uv and Winnow Nexus repo, MT dev environment
         "scripts/wml_twineu.sh",  # for uploading wheels to Winnow Nexus repo
         "scripts/user_twineu.sh",  # for uploading wheels to user-specific Winnow Nexus repo

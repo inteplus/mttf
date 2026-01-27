@@ -24,6 +24,8 @@ def main(args):
         "--link-mode=copy",
     ]
     pip_command += args.packages
+    print("Pypi URL:", pipi_url)
+    print("Running command:", " ".join(pip_command))
     return sp.run(pip_command, check=True)
 
 

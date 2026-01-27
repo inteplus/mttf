@@ -16,7 +16,7 @@ if git rev-parse --git-dir > /dev/null 2>&1; then
     echo "Package name: ${PACKAGE_NAME}"
     echo "Wheel to install: ${WHEEL_FILE}"
     uv pip uninstall ${PACKAGE_NAME}
-    user_pipi.sh -U dist/${WHEEL_FILE}
+    user_pipi.py -U dist/${WHEEL_FILE}
     echo "===== Uploading Python package to Winnow's Nexus server ====="
     user_twineu.sh dist/${WHEEL_FILE}
     cd ${CURR_PATH}

@@ -23,6 +23,8 @@ def main(args):
         "unsafe-best-match",
         "--link-mode=copy",
     ]
+    if args.upgrade:
+        pip_command += ["--upgrade"]
     pip_command += args.packages
     print("Pypi URL:", pipi_url)
     print("Running command:", " ".join(pip_command))
@@ -39,6 +41,12 @@ if __name__ == "__main__":
         default=None,
         type=str,
         help="Install packages from the nexus repo of a given user. If not, the current user's nexus repo is used.",
+    )
+    args.add_argument(
+        "-U",
+        "--upgrade",
+        action="store_true",
+        help="Upgrade all specified packages to the newest available version. The handling of dependencies depends on the upgrade-strategy used.",
     )
     args.add_argument("packages", nargs="*", help="Packages to install via pip.")
     parsed_args = args.parse_args()

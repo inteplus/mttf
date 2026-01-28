@@ -13,7 +13,7 @@ def main(args):
     if os.getuid() == 0:
         pip_command += ["-p", "/usr/bin/python3", "--system", "--break-system-packages"]
     else:
-        pip_command += ["--prerelease", "allow"]
+        pip_command += []  # ["--prerelease", "allow"]
     pip_command += [
         "--allow-insecure-host",
         "localhost",

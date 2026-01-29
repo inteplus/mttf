@@ -1,5 +1,4 @@
-"""Standard classifier from a feature vector.
-"""
+"""Standard classifier from a feature vector."""
 
 from mt import tp, tfc, logg
 from .. import models, layers, regularizers
@@ -47,7 +46,7 @@ def create_classifier_block(
         # dropout, optional
         dropout = getattr(params, "dropout", None)
         if dropout is not None and dropout > 0 and dropout < 1:
-            logg.info("Using dropout {dropout}.", logger=logger)
+            logg.info(f"Using dropout {dropout}.", logger=logger)
             x = layers.Dropout(dropout, name=name_scope("dropout"))(x)
 
         # Object classification branch

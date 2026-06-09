@@ -14,7 +14,7 @@ setup(
         # 'tensorflow', 'tensorflow-cpu' or 'tensorflow-gpu'
         "pyyaml",
         "mtbase>=4.33.0",  # to rely on uv
-        "mtnet>=0.3.3",  # just updating
+        "mtnet>=0.3.4",  # to have mt.tfc
     ],
     url="https://github.com/inteplus/mttf",
     project_urls={

@@ -7,9 +7,9 @@ VERSION_FILE = os.path.join(os.path.dirname(__file__), "VERSION.txt")
 
 setup(
     name="mttf",
-    description="A package to detect and monkey-patch TensorFlow and Keras, for Minh-Tri Pham",
+    description="A package to detect and monkey-patch TensorFlow, for Minh-Tri Pham",
     author="Minh-Tri Pham",
-    packages=find_namespace_packages(include=["mt.*"]),
+    packages=find_namespace_packages(include=["mt.tf*"]),
     install_requires=[
         # 'tensorflow', 'tensorflow-cpu' or 'tensorflow-gpu'
         "pyyaml",
